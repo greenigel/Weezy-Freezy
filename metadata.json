@@ -1,0 +1,6 @@
+{
+  "name": "CannaGrow Controller Dashboard",
+  "description": "Ein intelligentes Full-Stack-Grow-Dashboard zur Visualisierung, Steuerung und automatischen Strain-Profil-Regelung für DIY Cannabis-Growkammern mit historischer Datenanalyse und integriertem KI-Grow-Assistenten.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
