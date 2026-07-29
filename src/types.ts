@@ -16,6 +16,7 @@ export interface SensorData {
 export interface ActuatorState {
   light: boolean;           // ON / OFF (Licht)
   lightCoolingFan: boolean; // ON / OFF (Licht wasserkühlungsventilator)
+  lightCoolingPump: boolean;// ON / OFF (Licht wasserkühlungspumpe)
   cooling: boolean;         // ON / OFF (Kühlung)
   co2Valve: boolean;        // ON / OFF (CO2-Ventil)
   fan: boolean;             // ON / OFF (Abluft)
