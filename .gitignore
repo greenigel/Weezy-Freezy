@@ -1,6 +1,6 @@
 node_modules/
 build/
-dist/
+# dist/ is included for pre-built Raspberry Pi deployments
 coverage/
 .DS_Store
 *.log

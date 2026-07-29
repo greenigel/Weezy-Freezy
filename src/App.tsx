@@ -12,6 +12,7 @@ import ActuatorControl from "./components/ActuatorControl";
 import GrowCharts from "./components/GrowCharts";
 import ProfileManager from "./components/ProfileManager";
 import ApiDeveloperPanel from "./components/ApiDeveloperPanel";
+import CultivationAssistant from "./components/CultivationAssistant";
 
 import { 
   Thermometer, 
@@ -418,143 +419,155 @@ export default function App() {
               </div>
             )}
 
-            {/* METRIC CARD GAUGE GRID */}
-            {activeProfile && (
-              <div id="gauges-metric-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {/* 1. Cabinet Temp */}
-                <MetricCard
-                  title="Raum-Temperatur"
-                  value={sensors.temperature.toFixed(1)}
-                  unit="°C"
-                  target={sensors.temperature > 0 ? (actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight) : 0}
-                  icon={<Thermometer className="h-6 w-6" />}
-                  status={evaluateSensorStatus(
-                    "temperature",
-                    sensors.temperature,
-                    actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight,
-                    1.5,
-                    3.5
-                  )}
-                  description="Abluft springt an, sobald die Kammerwärme steigt."
-                />
+            {/* Dual Column Layout with Cultivation Assistant Companion Panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* PRIMARY PANEL: CHAMBER METRICS & HARDWARE CONTROLS */}
+              <div className="lg:col-span-8 space-y-6">
+                {activeProfile && (
+                  <div id="gauges-metric-grid" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {/* 1. Cabinet Temp */}
+                    <MetricCard
+                      title="Raum-Temperatur"
+                      value={sensors.temperature.toFixed(1)}
+                      unit="°C"
+                      target={sensors.temperature > 0 ? (actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight) : 0}
+                      icon={<Thermometer className="h-6 w-6" />}
+                      status={evaluateSensorStatus(
+                        "temperature",
+                        sensors.temperature,
+                        actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight,
+                        1.5,
+                        3.5
+                      )}
+                      description="Abluft springt an, sobald die Kammerwärme steigt."
+                    />
 
-                {/* 2. Humidit */}
-                <MetricCard
-                  title="Luftfeuchtigkeit (rH)"
-                  value={sensors.humidity.toFixed(1)}
-                  unit="%"
-                  target={activeProfile.targetHumidity}
-                  icon={<Droplet className="h-6 w-6" />}
-                  status={evaluateSensorStatus(
-                    "humidity",
-                    sensors.humidity,
-                    activeProfile.targetHumidity,
-                    5.0,
-                    12.0
-                  )}
-                  description="Humidier speist Aerosol ein. Lüfter lüftet bei Feuchtepeaks."
-                />
+                    {/* 2. Humidit */}
+                    <MetricCard
+                      title="Luftfeuchtigkeit (rH)"
+                      value={sensors.humidity.toFixed(1)}
+                      unit="%"
+                      target={activeProfile.targetHumidity}
+                      icon={<Droplet className="h-6 w-6" />}
+                      status={evaluateSensorStatus(
+                        "humidity",
+                        sensors.humidity,
+                        activeProfile.targetHumidity,
+                        5.0,
+                        12.0
+                      )}
+                      description="Humidier speist Aerosol ein. Lüfter lüftet bei Feuchtepeaks."
+                    />
 
-                {/* 3. CO2 */}
-                <MetricCard
-                  title="CO² Gehalt"
-                  value={sensors.co2}
-                  unit="ppm"
-                  target={activeProfile.targetCo2}
-                  icon={<Sliders className="h-6 w-6" />}
-                  status={evaluateSensorStatus(
-                    "co2",
-                    sensors.co2,
-                    activeProfile.targetCo2,
-                    120,
-                    350
-                  )}
-                  description="Relaisventil spritzt CO2 nur unter künstlicher Beleuchtung."
-                />
+                    {/* 3. CO2 */}
+                    <MetricCard
+                      title="CO² Gehalt"
+                      value={sensors.co2}
+                      unit="ppm"
+                      target={activeProfile.targetCo2}
+                      icon={<Sliders className="h-6 w-6" />}
+                      status={evaluateSensorStatus(
+                        "co2",
+                        sensors.co2,
+                        activeProfile.targetCo2,
+                        120,
+                        350
+                      )}
+                      description="Relaisventil spritzt CO2 nur unter künstlicher Beleuchtung."
+                    />
 
-                {/* 4. Soil moisture */}
-                <MetricCard
-                  title="Bodenfeuchtigkeit"
-                  value={sensors.soilMoisture.toFixed(1)}
-                  unit="%"
-                  target={activeProfile.targetSoilMoisture}
-                  icon={<Waves className="h-6 w-6" />}
-                  status={evaluateSensorStatus(
-                    "soilMoisture",
-                    sensors.soilMoisture,
-                    activeProfile.targetSoilMoisture,
-                    6.0,
-                    15.0
-                  )}
-                  description="Substratfeuchtigkeit des Teku-Topfes über kapazitiven SPI-Sensor."
-                />
+                    {/* 4. Soil moisture */}
+                    <MetricCard
+                      title="Bodenfeuchtigkeit"
+                      value={sensors.soilMoisture.toFixed(1)}
+                      unit="%"
+                      target={activeProfile.targetSoilMoisture}
+                      icon={<Waves className="h-6 w-6" />}
+                      status={evaluateSensorStatus(
+                        "soilMoisture",
+                        sensors.soilMoisture,
+                        activeProfile.targetSoilMoisture,
+                        6.0,
+                        15.0
+                      )}
+                      description="Substratfeuchtigkeit des Teku-Topfes über kapazitiven SPI-Sensor."
+                    />
 
-                {/* 5. ph-value */}
-                <MetricCard
-                  title="Wasser pH-Wert"
-                  value={sensors.ph.toFixed(2)}
-                  unit="pH"
-                  target={activeProfile.targetPh}
-                  icon={<Sliders className="h-6 w-6" />}
-                  status={evaluateSensorStatus(
-                    "ph",
-                    sensors.ph,
-                    activeProfile.targetPh,
-                    0.15,
-                    0.4
-                  )}
-                  description="Wichtig für Ionenaufnahme. Dosierpumpe spritzt Korrektur-Säuren."
-                />
+                    {/* 5. ph-value */}
+                    <MetricCard
+                      title="Wasser pH-Wert"
+                      value={sensors.ph.toFixed(2)}
+                      unit="pH"
+                      target={activeProfile.targetPh}
+                      icon={<Sliders className="h-6 w-6" />}
+                      status={evaluateSensorStatus(
+                        "ph",
+                        sensors.ph,
+                        activeProfile.targetPh,
+                        0.15,
+                        0.4
+                      )}
+                      description="Wichtig für Ionenaufnahme. Dosierpumpe spritzt Korrektur-Säuren."
+                    />
 
-                {/* 6. EC electrical conduct */}
-                <MetricCard
-                  title="Wasser Leitwert (EC)"
-                  value={sensors.ec.toFixed(2)}
-                  unit="mS"
-                  target={activeProfile.targetEc}
-                  icon={<Droplet className="h-6 w-6" />}
-                  status={evaluateSensorStatus(
-                    "ec",
-                    sensors.ec,
-                    activeProfile.targetEc,
-                    0.15,
-                    0.35
-                  )}
-                  description="Nährstoffkonzentration des Hydroponiktanks."
-                />
+                    {/* 6. EC electrical conduct */}
+                    <MetricCard
+                      title="Wasser Leitwert (EC)"
+                      value={sensors.ec.toFixed(2)}
+                      unit="mS"
+                      target={activeProfile.targetEc}
+                      icon={<Droplet className="h-6 w-6" />}
+                      status={evaluateSensorStatus(
+                        "ec",
+                        sensors.ec,
+                        activeProfile.targetEc,
+                        0.15,
+                        0.35
+                      )}
+                      description="Nährstoffkonzentration des Hydroponiktanks."
+                    />
 
-                {/* 7. Water temperature */}
-                <MetricCard
-                  title="Wassertemperatur"
-                  value={sensors.waterTemp.toFixed(1)}
-                  unit="°C"
-                  target="18 - 21"
-                  icon={<Thermometer className="h-6 w-6" />}
-                  status={sensors.waterTemp > 23 ? "warning" : sensors.waterTemp < 15 ? "warning" : "success"}
-                  description="Kühle Nährlösung speichert mehr Sauerstoff und beugt Wurzelfäule vor."
-                />
+                    {/* 7. Water temperature */}
+                    <MetricCard
+                      title="Wassertemperatur"
+                      value={sensors.waterTemp.toFixed(1)}
+                      unit="°C"
+                      target="18 - 21"
+                      icon={<Thermometer className="h-6 w-6" />}
+                      status={sensors.waterTemp > 23 ? "warning" : sensors.waterTemp < 15 ? "warning" : "success"}
+                      description="Kühle Nährlösung speichert mehr Sauerstoff und beugt Wurzelfäule vor."
+                    />
 
-                {/* 8. Light hours status */}
-                <MetricCard
-                  title="Beleuchtung AN/AUS"
-                  value={actuators.light ? "AN" : "AUS"}
-                  unit=""
-                  target={`${activeProfile.lightOnDuration}h / Tag`}
-                  icon={<Sparkles className="h-6 w-6" />}
-                  status={actuators.light ? "success" : "inactive"}
-                  description="Moduliert den Photoperioden-Wachstumszyklus des Strains."
+                    {/* 8. Light hours status */}
+                    <MetricCard
+                      title="Beleuchtung AN/AUS"
+                      value={actuators.light ? "AN" : "AUS"}
+                      unit=""
+                      target={`${activeProfile.lightOnDuration}h / Tag`}
+                      icon={<Sparkles className="h-6 w-6" />}
+                      status={actuators.light ? "success" : "inactive"}
+                      description="Moduliert den Photoperioden-Wachstumszyklus des Strains."
+                    />
+                  </div>
+                )}
+
+                {/* ACTUATOR CONTROL PANEL CHIPS */}
+                <ActuatorControl
+                  actuators={actuators}
+                  overrideActuators={overrideActuators}
+                  isAutoMode={isAutoMode}
+                  onToggleActuator={handleToggleActuator}
+                  onToggleAutoMode={handleToggleAutoMode}
                 />
               </div>
-            )}
 
-            {/* ACTUATOR CONTROL PANEL CHIPS */}
-            <ActuatorControl
-              actuators={actuators}
-              overrideActuators={overrideActuators}
-              isAutoMode={isAutoMode}
-              onToggleActuator={handleToggleActuator}
-              onToggleAutoMode={handleToggleAutoMode}
-            />
+              {/* SECONDARY PANEL: LIVE CAM & SCHEDULER INTERVENTIONS */}
+              <div className="lg:col-span-4">
+                <CultivationAssistant />
+              </div>
+
+            </div>
           </div>
         )}
 

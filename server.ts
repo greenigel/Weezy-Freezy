@@ -1,6 +1,5 @@
 import express, { Request, Response } from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { ControllerState, SensorData, ActuatorState, GrowProfile, ApiLogEntry } from "./src/types";
 
 // Polyfill for static paths
@@ -512,6 +511,7 @@ async function startServer() {
 
   // Vite integration middleware
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
