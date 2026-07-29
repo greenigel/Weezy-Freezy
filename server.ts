@@ -137,8 +137,15 @@ function runRegulationCore() {
   // 1. Light Cycle Control (Lichtzyklus)
   let lightShouldBeOn = false;
   if (target.lightOnDuration > 0) {
-    // simple simulation based on current hour
-    lightShouldBeOn = (hour % 24) < target.lightOnDuration;
+    const startHour = target.lightOnStartTime || 6; // Default to 6 AM
+    const endHour = (startHour + target.lightOnDuration) % 24;
+    
+    if (startHour < endHour) {
+      lightShouldBeOn = hour >= startHour && hour < endHour;
+    } else {
+      // Over midnight
+      lightShouldBeOn = hour >= startHour || hour < endHour;
+    }
   }
   
   // 2. Temperature Regulation & Dehumidification (Closed Fridge System)
