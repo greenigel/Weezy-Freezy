@@ -34,17 +34,42 @@ except ImportError:
     sys.exit(1)
 
 def read_sensor():
+    bus = None
     try:
         bus = smbus2.SMBus(I2C_PORT)
-        calibration_params = bme280.load_calibration_data(bus, I2C_ADDRESS)
-        data = bme280.sample(bus, I2C_ADDRESS, calibration_params)
-        bus.close()
         
-        temp = round(data.temperature, 2)
-        humidity = round(data.humidity, 2) if hasattr(data, 'humidity') else None
-        
-        return temp, humidity
+        # Method 1: rpi-bme280 (has load_calibration_data)
+        if hasattr(bme280, 'load_calibration_data'):
+            calibration_params = bme280.load_calibration_data(bus, I2C_ADDRESS)
+            data = bme280.sample(bus, I2C_ADDRESS, calibration_params)
+            temp = round(data.temperature, 2)
+            humidity = round(data.humidity, 2) if hasattr(data, 'humidity') and data.humidity is not None else None
+            bus.close()
+            return temp, humidity
+
+        # Method 2: Pimoroni / python3-bme280 apt package (has BME280 class)
+        elif hasattr(bme280, 'BME280'):
+            sensor = bme280.BME280(i2c_dev=bus)
+            temp = round(sensor.get_temperature(), 2)
+            try:
+                humidity = round(sensor.get_humidity(), 2)
+            except Exception:
+                humidity = None
+            bus.close()
+            return temp, humidity
+
+        # Method 3: Generic fallback
+        else:
+            print("Unbekannte bme280 Bibliothek Struktur. Versuche Standard-Aufruf...")
+            bus.close()
+            return None, None
+
     except Exception as e:
+        if bus:
+            try:
+                bus.close()
+            except Exception:
+                pass
         print(f"Fehler beim Lesen des I2C-Sensors: {e}")
         return None, None
 
