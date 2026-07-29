@@ -395,7 +395,7 @@ async function startServer() {
   });
 
   // Vite integration middleware (only in explicit development mode)
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = process.env.NODE_ENV !== "production";
   const distPath = path.join(process.cwd(), 'dist');
 
   if (isDev) {
