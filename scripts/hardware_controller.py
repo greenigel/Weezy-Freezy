@@ -23,10 +23,19 @@ Verkabelung ADS1115 (für CWT-Soil-HC-V5 Sensor):
 
 import time
 import requests
-import board
-import busio
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
+import sys
+
+try:
+    import board
+    import busio
+    import adafruit_ads1x15.ads1115 as ADS
+    from adafruit_ads1x15.analog_in import AnalogIn
+except ImportError:
+    print("FEHLER: 'board', 'busio' oder 'adafruit_ads1x15' nicht gefunden!")
+    print("Bitte installiere folgende Pakete auf dem Raspberry Pi:")
+    print("pip3 install adafruit-blinka adafruit-circuitpython-ads1x15")
+    print("Falls du eine globale Umgebung nutzt (PEP 668), ergänze '--break-system-packages' oder nutze venv.")
+    sys.exit(1)
 
 try:
     import RPi.GPIO as GPIO
@@ -77,11 +86,18 @@ except Exception as e:
     print(f"Fehler bei der Initialisierung des ADS1115: {e}")
     print("Sensordaten werden übersprungen.")
 
+# Konfiguration der Relais-Logik
+# True = Relais schaltet bei LOW (häufig bei Arduino/Pi Relaisboards)
+# False = Relais schaltet bei HIGH (Active-High)
+ACTIVE_LOW = True
+
 def set_relais(pin, state):
-    # Bei vielen Relais-Boards bedeutet LOW = AN (Active-Low)
-    # Wenn dein Board Active-High ist, ändere dies zu GPIO.HIGH wenn state == True
     gpio_state = GPIO.LOW if state else GPIO.HIGH
+    if not ACTIVE_LOW:
+        gpio_state = not gpio_state # Invertieren falls Active-High
+
     GPIO.output(pin, gpio_state)
+    # print(f"Pin {pin} -> {'AN' if state else 'AUS'}") # Für Debugging einkommentieren
 
 def read_soil_moisture():
     if chan is None:
