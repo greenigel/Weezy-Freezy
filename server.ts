@@ -83,6 +83,7 @@ let controllerState: ControllerState = {
   actuators: {
     light: true,
     lightCoolingFan: true,
+    lightCoolingPump: true,
     cooling: false,
     co2Valve: true,
     fan: false,
@@ -140,26 +141,34 @@ function runRegulationCore() {
     lightShouldBeOn = (hour % 24) < target.lightOnDuration;
   }
   
-  // 2. Temperature Regulation
+  // 2. Temperature Regulation & Dehumidification (Closed Fridge System)
   const currentTargetTemp = lightShouldBeOn ? target.targetTempDay : target.targetTempNight;
-  let fanShouldBeOn = false;     // Abluft
-  let coolingShouldBeOn = false; // Aktive Kühlung
   
+  let coolingShouldBeOn = false; // Fridge compressor (Kühlschrank)
+  let lightCoolingFanShouldBeOn = lightShouldBeOn; // Default: Lamp radiator fan on when light is on
+  let lightCoolingPumpShouldBeOn = lightShouldBeOn; // Default: Lamp cooling pump runs when light is on
+  let fanShouldBeOn = false; // Abluft is not used in this closed system
+  
+  // Dehumidification via cooling
+  let needsDehumidification = false;
+  if (sensors.humidity !== null && sensors.humidity > target.targetHumidity + 2.0) {
+    needsDehumidification = true;
+  }
+
+  // Temperature logic
   if (sensors.temperature !== null) {
-    if (sensors.temperature > currentTargetTemp + 0.5) {
-      fanShouldBeOn = true; 
-    } 
-    if (sensors.temperature > currentTargetTemp + 1.5) {
-      coolingShouldBeOn = true; // Extra Kühlung zuschalten
+    if (sensors.temperature > currentTargetTemp + 1.0) {
+      coolingShouldBeOn = true; // Temp is too high -> turn on fridge
     }
   }
-  
-  if (sensors.humidity !== null && sensors.humidity > target.targetHumidity + 2.0) {
-    fanShouldBeOn = true; // Humidity is high, run extraction fan to dehumidify
+
+  // Humidity logic overrides for the radiator fans
+  if (needsDehumidification && lightShouldBeOn) {
+    // To dehumidify, we turn OFF the radiator fans.
+    // This reduces heat extraction from the lamp, raising the ambient temp in the fridge.
+    // This forces the fridge (cooling) to work more, which dehumidifies the air.
+    lightCoolingFanShouldBeOn = false;
   }
-  
-  // Licht wasserkühlungsventilator runs whenever the light is on
-  let lightCoolingFanShouldBeOn = lightShouldBeOn;
   
   // 3. Humidifier Control
   let humidifierShouldBeOn = false;
@@ -168,9 +177,9 @@ function runRegulationCore() {
   }
   
   // 4. CO2 Solenoid Valve
-  // Plants only absorb CO2 during the lights-on phase (and normally exhaust fan should be off to not waste it, but kept simple here)
+  // Plants only absorb CO2 during the lights-on phase
   let co2ShouldBeOn = false;
-  if (lightShouldBeOn && sensors.co2 !== null && sensors.co2 < target.targetCo2 - 50 && target.stage !== "drying" && !fanShouldBeOn) {
+  if (lightShouldBeOn && sensors.co2 !== null && sensors.co2 < target.targetCo2 - 50 && target.stage !== "drying") {
     co2ShouldBeOn = true; 
   }
   
@@ -217,6 +226,7 @@ function runRegulationCore() {
   controllerState.actuators = {
     light: applyState("light", lightShouldBeOn),
     lightCoolingFan: applyState("lightCoolingFan", lightCoolingFanShouldBeOn),
+    lightCoolingPump: applyState("lightCoolingPump", lightCoolingPumpShouldBeOn),
     cooling: applyState("cooling", coolingShouldBeOn),
     co2Valve: applyState("co2Valve", co2ShouldBeOn),
     fan: applyState("fan", fanShouldBeOn),
