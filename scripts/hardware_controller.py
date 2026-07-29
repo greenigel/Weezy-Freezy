@@ -77,12 +77,18 @@ GPIO.setup(PIN_CO2, GPIO.OUT)
 # Initialisiere I2C und ADS1115
 ads = None
 chan = None
+chan1 = None
+chan2 = None
+chan3 = None
 try:
     i2c = busio.I2C(board.SCL, board.SDA)
     ads = ADS.ADS1115(i2c)
     ads.gain = 2/3
     # Verwende Kanal 0 für den Bodensensor
     chan = AnalogIn(ads, ads1x15.Pin.A0)
+    chan1 = AnalogIn(ads, ads1x15.Pin.A1)
+    chan2 = AnalogIn(ads, ads1x15.Pin.A2)
+    chan3 = AnalogIn(ads, ads1x15.Pin.A3)
     print("ADS1115 erfolgreich initialisiert.")
 except Exception as e:
     print(f"Fehler bei der Initialisierung des ADS1115: {e}")
@@ -93,6 +99,9 @@ except Exception as e:
 # False = Relais schaltet bei HIGH (Active-High)
 ACTIVE_LOW = True
 
+VOLTAGE_HISTORY = []
+HISTORY_SIZE = 10
+
 def set_relais(pin, state):
     gpio_state = GPIO.LOW if state else GPIO.HIGH
     if not ACTIVE_LOW:
@@ -102,28 +111,46 @@ def set_relais(pin, state):
     # print(f"Pin {pin} -> {'AN' if state else 'AUS'}") # Für Debugging einkommentieren
 
 def read_soil_moisture():
+    global VOLTAGE_HISTORY
     if chan is None:
         return None
     try:
         # Lese die Spannung des analogen Pins (A0)
         voltage = chan.voltage
         
+        VOLTAGE_HISTORY.append(voltage)
+        if len(VOLTAGE_HISTORY) > HISTORY_SIZE:
+            VOLTAGE_HISTORY.pop(0)
+            
+        valid_values = VOLTAGE_HISTORY.copy()
+        if len(valid_values) >= 5:
+            valid_values.sort()
+            # Entferne die 2 höchsten und 2 niedrigsten Werte (stärkere Ausreißer-Filterung)
+            valid_values = valid_values[2:-2]
+        elif len(valid_values) >= 3:
+            valid_values.sort()
+            valid_values = valid_values[1:-1]
+            
+        avg_voltage = sum(valid_values) / len(valid_values)
+        
+        # Read the other channels
+        voltage1 = chan1.voltage if 'chan1' in globals() and chan1 is not None else 0
+        voltage2 = chan2.voltage if 'chan2' in globals() and chan2 is not None else 0
+        voltage3 = chan3.voltage if 'chan3' in globals() and chan3 is not None else 0
+        
         # Für die Kalibrierung drucken wir die Roh-Spannung aus:
-        # Setze das Terminal-Kommando `sudo journalctl -u weezy-hardware -f` ein, um diese Werte zu sehen.
-        # Nimm den Wert, wenn der Sensor komplett trocken ist (z.B. V_MIN = 0.5V)
-        # Und den Wert, wenn er im Wasserglas steht (z.B. V_MAX = 2.8V)
-        print(f"[Sensor] Rohspannung Bodenfeuchte: {voltage:.2f}V")
+        print(f"[Sensor] A0(Feuchte): Roh {voltage:.2f}V / Gefiltert {avg_voltage:.2f}V | A1(EC): {voltage1:.2f}V | A2(Temp?): {voltage2:.2f}V | A3(pH?): {voltage3:.2f}V")
         
         # --- KALIBRIERUNGSWERTE HIER ANPASSEN ---
-        V_MIN = 0.0  # Spannung bei 0% Feuchtigkeit (komplett trocken)
-        V_MAX = 3.0  # Spannung bei 100% Feuchtigkeit (Wasser)
+        V_MIN = 2.0  # Spannung bei 0% Feuchtigkeit (komplett trocken)
+        V_MAX = 4.0  # Spannung bei 100% Feuchtigkeit (Wasser)
         
         # Verhindere Division durch Null
         if V_MAX == V_MIN:
             return 0
             
         # Berechne den Prozentwert
-        moisture_percent = ((voltage - V_MIN) / (V_MAX - V_MIN)) * 100.0
+        moisture_percent = ((avg_voltage - V_MIN) / (V_MAX - V_MIN)) * 100.0
         
         # Begrenze auf 0-100%
         moisture_percent = max(0, min(100, moisture_percent))
