@@ -30,6 +30,7 @@ try:
     import busio
     import adafruit_ads1x15.ads1115 as ADS
     from adafruit_ads1x15.analog_in import AnalogIn
+    import adafruit_ads1x15.ads1x15 as ads1x15
 except ImportError:
     print("FEHLER: 'board', 'busio' oder 'adafruit_ads1x15' nicht gefunden!")
     print("Bitte installiere folgende Pakete auf dem Raspberry Pi:")
@@ -80,7 +81,7 @@ try:
     i2c = busio.I2C(board.SCL, board.SDA)
     ads = ADS.ADS1115(i2c)
     # Verwende Kanal 0 für den Bodensensor
-    chan = AnalogIn(ads, ADS.P0)
+    chan = AnalogIn(ads, ads1x15.Pin.A0)
     print("ADS1115 erfolgreich initialisiert.")
 except Exception as e:
     print(f"Fehler bei der Initialisierung des ADS1115: {e}")
