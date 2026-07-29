@@ -21,6 +21,7 @@ export default function ProfileManager({
     name: "",
     description: "",
     stage: "vegetative",
+    lightOnStartTime: 6,
     lightOnDuration: 18,
     targetTempDay: 25.0,
     targetTempNight: 20.0,
@@ -69,6 +70,7 @@ export default function ProfileManager({
       name: "",
       description: "",
       stage: "vegetative",
+      lightOnStartTime: 6,
       lightOnDuration: 18,
       targetTempDay: 25.0,
       targetTempNight: 20.0,
@@ -155,6 +157,17 @@ export default function ProfileManager({
               />
             </div>
 
+            <div>
+              <label className="block text-2xs font-semibold text-slate-400 uppercase">Lichtperiode Start (Stunde)</label>
+              <input
+                type="number"
+                min="0"
+                max="23"
+                value={newProfile.lightOnStartTime ?? 6}
+                onChange={(e) => setNewProfile({ ...newProfile, lightOnStartTime: Number(e.target.value) })}
+                className="mt-1 w-full bg-slate-950 text-white rounded-lg border border-slate-800 p-2 text-sm focus:outline-none"
+              />
+            </div>
             <div>
               <label className="block text-2xs font-semibold text-slate-400 uppercase">Lichtperiode (Stunden AN)</label>
               <input
@@ -256,6 +269,18 @@ export default function ProfileManager({
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
+              <label className="block text-3xs font-semibold text-slate-400 uppercase">Licht Start (Stunde)</label>
+              <input
+                type="range"
+                min="0"
+                max="23"
+                value={editingProfile.lightOnStartTime ?? 6}
+                onChange={(e) => setEditingProfile({ ...editingProfile, lightOnStartTime: Number(e.target.value) })}
+                className="w-full accent-amber-500 mt-1.5"
+              />
+              <span className="text-xs text-slate-300 font-mono">{editingProfile.lightOnStartTime ?? 6}:00 Uhr</span>
+            </div>
+            <div>
               <label className="block text-3xs font-semibold text-slate-400 uppercase">Beleuchtung (Stunden)</label>
               <input
                 type="range"
@@ -275,6 +300,17 @@ export default function ProfileManager({
                 step="0.5"
                 value={editingProfile.targetTempDay}
                 onChange={(e) => setEditingProfile({ ...editingProfile, targetTempDay: Number(e.target.value) })}
+                className="mt-1 w-full bg-slate-950 border border-slate-800 rounded p-1 text-xs text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-3xs font-semibold text-slate-400 uppercase">Soll-Temp Nacht (°C)</label>
+              <input
+                type="number"
+                step="0.5"
+                value={editingProfile.targetTempNight ?? 20}
+                onChange={(e) => setEditingProfile({ ...editingProfile, targetTempNight: Number(e.target.value) })}
                 className="mt-1 w-full bg-slate-950 border border-slate-800 rounded p-1 text-xs text-white"
               />
             </div>
@@ -393,7 +429,7 @@ export default function ProfileManager({
                   </div>
                   <div className="border-r border-slate-800/60">
                     <p className="text-slate-500 uppercase font-sans">Klima (°C)</p>
-                    <p className="text-white text-xs font-bold mt-0.5">{profile.targetTempDay}°C</p>
+                    <p className="text-white text-xs font-bold mt-0.5">{profile.targetTempDay} | {profile.targetTempNight}</p>
                   </div>
                   <div className="border-r border-slate-800/60">
                     <p className="text-slate-500 uppercase font-sans">Luft %</p>
