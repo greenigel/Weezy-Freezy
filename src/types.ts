@@ -33,6 +33,7 @@ export interface GrowProfile {
   description: string;
   stage: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'drying';
   // Target values
+  lightOnStartTime?: number;  // Hour of day to start light cycle (0-23)
   lightOnDuration: number;    // Hours, e.g., 18 for veg, 12 for flower
   targetTempDay: number;      // °C
   targetTempNight: number;    // °C
