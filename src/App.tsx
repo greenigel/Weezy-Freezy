@@ -47,9 +47,11 @@ export default function App() {
   
   const [actuators, setActuators] = useState<ActuatorState>({
     light: false,
+    lightCoolingFan: false,
+    cooling: false,
+    co2Valve: false,
     fan: false,
     humidifier: false,
-    co2Valve: false,
     pump: false,
     phUpPump: false,
     phDownPump: false,
@@ -59,6 +61,7 @@ export default function App() {
   const [overrideActuators, setOverrideActuators] = useState<Partial<Record<keyof ActuatorState, boolean>>>({});
   const [activeProfile, setActiveProfile] = useState<GrowProfile | null>(null);
   const [isAutoMode, setIsAutoMode] = useState(true);
+  const [cultivationMode, setCultivationMode] = useState<'bio' | 'mineralisch'>('bio');
   const [lastTelemetryTime, setLastTelemetryTime] = useState("");
   
   // Lists
@@ -91,6 +94,7 @@ export default function App() {
         setOverrideActuators(data.overrideActuators || {});
         setActiveProfile(data.activeProfile);
         setIsAutoMode(data.isAutoMode);
+        setCultivationMode(data.cultivationMode);
         setLastTelemetryTime(data.lastTelemetryTime);
         setIsOffline(false);
       } catch (err) {
@@ -203,6 +207,25 @@ export default function App() {
       }
     } catch (e) {
       console.error("Auto state toggle failed", e);
+    }
+  };
+
+  // Change cultivation mode
+  const handleToggleCultivationMode = async (mode: 'bio' | 'mineralisch') => {
+    setCultivationMode(mode);
+    try {
+      const res = await fetch("/api/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cultivationMode: mode })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCultivationMode(data.controllerState.cultivationMode);
+        setActuators(data.controllerState.actuators);
+      }
+    } catch (e) {
+      console.error("Cultivation mode toggle failed", e);
     }
   };
 
@@ -557,8 +580,10 @@ export default function App() {
                   actuators={actuators}
                   overrideActuators={overrideActuators}
                   isAutoMode={isAutoMode}
+                  cultivationMode={cultivationMode}
                   onToggleActuator={handleToggleActuator}
                   onToggleAutoMode={handleToggleAutoMode}
+                  onToggleCultivationMode={handleToggleCultivationMode}
                 />
               </div>
 

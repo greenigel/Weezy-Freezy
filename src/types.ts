@@ -14,10 +14,12 @@ export interface SensorData {
 }
 
 export interface ActuatorState {
-  light: boolean;           // ON / OFF (Lichtzyklus)
-  fan: boolean;             // ON / OFF (Exhaust ventilation fan)
-  humidifier: boolean;      // ON / OFF (Luftbefeuchter)
+  light: boolean;           // ON / OFF (Licht)
+  lightCoolingFan: boolean; // ON / OFF (Licht wasserkühlungsventilator)
+  cooling: boolean;         // ON / OFF (Kühlung)
   co2Valve: boolean;        // ON / OFF (CO2-Ventil)
+  fan: boolean;             // ON / OFF (Abluft)
+  humidifier: boolean;      // ON / OFF (Luftbefeuchter)
   pump: boolean;            // ON / OFF (Bewässerungspumpe)
   phUpPump: boolean;        // ON / OFF (pH+ Dosierpumpe)
   phDownPump: boolean;      // ON / OFF (pH- Dosierpumpe)
@@ -49,6 +51,7 @@ export interface ControllerState {
   lastTelemetryTime: string;
   wateringThresholdRun: boolean; // if we are in active irrigation cycle
   isAutoMode: boolean; // false if user took manual control of everything
+  cultivationMode: 'bio' | 'mineralisch'; // bio = ohne Düngeranmischung, mineralisch = mit Dünger
 }
 
 export interface ApiLogEntry {

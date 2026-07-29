@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""
+Weezy-Freezy Hardware Controller
+--------------------------------
+Steuert die Relais basierend auf den Vorgaben vom Server und liest den Bodenfeuchtesensor.
+
+Voraussetzungen auf dem Raspberry Pi:
+  pip3 install RPi.GPIO adafruit-circuitpython-ads1x15 requests
+
+Verkabelung Relais:
+  - Licht: GPIO 17 (Pin 11)
+  - Licht Wasserkühlung (Ventilator): GPIO 27 (Pin 13)
+  - Kühlung: GPIO 22 (Pin 15)
+  - CO2 Ventil: GPIO 23 (Pin 16)
+
+Verkabelung ADS1115 (für CWT-Soil-HC-V5 Sensor):
+  - VDD -> 3.3V oder 5V (passend zum Sensor/Pi, meist 3.3V für I2C)
+  - GND -> GND
+  - SCL -> GPIO 3 (SCL)
+  - SDA -> GPIO 2 (SDA)
+  - Analog Out vom CWT-Soil Sensor -> A0 am ADS1115
+"""
+
+import time
+import requests
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    print("RPi.GPIO nicht gefunden (läuft das Skript auf einem Raspberry Pi?).")
+    print("Verwende Dummy-GPIO für Testzwecke.")
+    class DummyGPIO:
+        BCM = "BCM"
+        OUT = "OUT"
+        HIGH = True
+        LOW = False
+        def setmode(self, mode): pass
+        def setup(self, pin, mode): pass
+        def output(self, pin, state):
+            print(f"[Dummy GPIO] Pin {pin} -> {'ON' if state else 'OFF'}")
+        def cleanup(self): pass
+        def setwarnings(self, state): pass
+    GPIO = DummyGPIO()
+
+
+SERVER_URL_ACTUATORS = "http://localhost:3000/api/state"
+SERVER_URL_TELEMETRY = "http://localhost:3000/api/telemetry"
+
+# GPIO Pin Mapping
+PIN_LIGHT = 17
+PIN_LIGHT_COOLING = 27
+PIN_COOLING = 22
+PIN_CO2 = 23
+
+# Initialisiere GPIO
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(PIN_LIGHT, GPIO.OUT)
+GPIO.setup(PIN_LIGHT_COOLING, GPIO.OUT)
+GPIO.setup(PIN_COOLING, GPIO.OUT)
+GPIO.setup(PIN_CO2, GPIO.OUT)
+
+# Initialisiere I2C und ADS1115
+ads = None
+chan = None
+try:
+    i2c = busio.I2C(board.SCL, board.SDA)
+    ads = ADS.ADS1115(i2c)
+    # Verwende Kanal 0 für den Bodensensor
+    chan = AnalogIn(ads, ADS.P0)
+    print("ADS1115 erfolgreich initialisiert.")
+except Exception as e:
+    print(f"Fehler bei der Initialisierung des ADS1115: {e}")
+    print("Sensordaten werden übersprungen.")
+
+def set_relais(pin, state):
+    # Bei vielen Relais-Boards bedeutet LOW = AN (Active-Low)
+    # Wenn dein Board Active-High ist, ändere dies zu GPIO.HIGH wenn state == True
+    gpio_state = GPIO.LOW if state else GPIO.HIGH
+    GPIO.output(pin, gpio_state)
+
+def read_soil_moisture():
+    if chan is None:
+        return None
+    try:
+        # Die Spannung (chan.voltage) oder der rohe Wert (chan.value) können genutzt werden.
+        # Dies muss je nach exaktem Output des CWT-Soil-HC-V5 kalibriert werden.
+        # Beispielhafte Kalibrierung (0V = 0%, 3V = 100%):
+        voltage = chan.voltage
+        moisture_percent = (voltage / 3.0) * 100.0
+        
+        # Begrenze auf 0-100%
+        moisture_percent = max(0, min(100, moisture_percent))
+        return round(moisture_percent, 1)
+    except Exception as e:
+        print(f"Fehler beim Lesen des Bodensensors: {e}")
+        return None
+
+def main():
+    print("Hardware Controller gestartet...")
+    while True:
+        try:
+            # 1. Hole Soll-Zustand der Relais vom Server
+            res = requests.get(SERVER_URL_ACTUATORS, timeout=5)
+            if res.status_code == 200:
+                data = res.json()
+                actuators = data.get("actuators", {})
+                
+                # Relais schalten
+                set_relais(PIN_LIGHT, actuators.get("light", False))
+                set_relais(PIN_LIGHT_COOLING, actuators.get("lightCoolingFan", False))
+                set_relais(PIN_COOLING, actuators.get("cooling", False))
+                set_relais(PIN_CO2, actuators.get("co2Valve", False))
+                
+            # 2. Lese Bodensensor und sende Telemetrie an Server
+            soil_moisture = read_soil_moisture()
+            if soil_moisture is not None:
+                payload = {"soilMoisture": soil_moisture}
+                requests.post(SERVER_URL_TELEMETRY, json=payload, timeout=5)
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Netzwerkfehler beim Kontakt mit dem Server: {e}")
+        except Exception as e:
+            print(f"Unerwarteter Fehler: {e}")
+            
+        time.sleep(2) # Alle 2 Sekunden updaten
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Beende Hardware Controller...")
+        GPIO.cleanup()

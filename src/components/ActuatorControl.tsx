@@ -1,20 +1,24 @@
 import { ActuatorState } from "../types";
-import { Lightbulb, Wind, CloudRain, Shield, Activity, Droplets, ArrowUp, ArrowDown, Zap } from "lucide-react";
+import { Lightbulb, Wind, CloudRain, Shield, Activity, Droplets, ArrowUp, ArrowDown, Zap, ThermometerSnowflake, Fan } from "lucide-react";
 
 interface ActuatorControlProps {
   actuators: ActuatorState;
   overrideActuators: Partial<Record<keyof ActuatorState, boolean>>;
   isAutoMode: boolean;
+  cultivationMode: 'bio' | 'mineralisch';
   onToggleActuator: (key: keyof ActuatorState, value: boolean) => void;
   onToggleAutoMode: (autoMode: boolean) => void;
+  onToggleCultivationMode: (mode: 'bio' | 'mineralisch') => void;
 }
 
 export default function ActuatorControl({
   actuators,
   overrideActuators,
   isAutoMode,
+  cultivationMode,
   onToggleActuator,
-  onToggleAutoMode
+  onToggleAutoMode,
+  onToggleCultivationMode
 }: ActuatorControlProps) {
 
   const actuatorSpecs: Array<{
@@ -28,7 +32,7 @@ export default function ActuatorControl({
   }> = [
     {
       key: "light",
-      label: "Beleuchtung (Lichtzyklus)",
+      label: "Beleuchtung (Licht)",
       subLabel: "Eingebautes LED-Relais",
       description: "Steuert den Tag/Nacht-Wachstumszyklus der Kammer.",
       icon: Lightbulb,
@@ -36,22 +40,22 @@ export default function ActuatorControl({
       triggerDesc: "Schaltet nach Stunden-Vorgabe"
     },
     {
-      key: "fan",
-      label: "Abluft-Ventilation",
-      subLabel: "Kammer-Lüfter",
-      description: "Saugt heiße oder feuchte Luft ab zur Klimastabilisierung.",
-      icon: Wind,
-      color: "peer-checked:bg-blue-500",
-      triggerDesc: "Ein bei Übertemperatur/Überfeuchte"
+      key: "lightCoolingFan",
+      label: "Wasserkühlung Beleuchtung",
+      subLabel: "LED Ventilator",
+      description: "Aktiviert die aktive Kühlung der Leuchtmittel.",
+      icon: Fan,
+      color: "peer-checked:bg-sky-500",
+      triggerDesc: "Aktiv wenn Beleuchtung an"
     },
     {
-      key: "humidifier",
-      label: "Luftbefeuchter",
-      subLabel: "Humidifier Relais",
-      description: "Speist feines Aerosol ein, wenn die Raumluft zu trocken wird.",
-      icon: CloudRain,
-      color: "peer-checked:bg-cyan-500",
-      triggerDesc: "Ein bei Luftfeuchte-Verlust"
+      key: "cooling",
+      label: "Aktive Kühlung",
+      subLabel: "Kühlaggregat/Peltier",
+      description: "Senkt die Temperatur in der Box aktiv.",
+      icon: ThermometerSnowflake,
+      color: "peer-checked:bg-blue-400",
+      triggerDesc: "Ein bei starker Übertemperatur"
     },
     {
       key: "co2Valve",
@@ -61,6 +65,24 @@ export default function ActuatorControl({
       icon: Shield,
       color: "peer-checked:bg-purple-500",
       triggerDesc: "Aktiv nur bei Licht-An Phase"
+    },
+    {
+      key: "fan",
+      label: "Abluft-Ventilation",
+      subLabel: "Kammer-Lüfter",
+      description: "Saugt heiße oder feuchte Luft ab zur Klimastabilisierung.",
+      icon: Wind,
+      color: "peer-checked:bg-slate-500",
+      triggerDesc: "Ein bei leichter Übertemperatur/Überfeuchte"
+    },
+    {
+      key: "humidifier",
+      label: "Luftbefeuchter",
+      subLabel: "Humidifier Relais",
+      description: "Speist feines Aerosol ein, wenn die Raumluft zu trocken wird.",
+      icon: CloudRain,
+      color: "peer-checked:bg-cyan-500",
+      triggerDesc: "Ein bei Luftfeuchte-Verlust"
     },
     {
       key: "pump",
@@ -78,7 +100,7 @@ export default function ActuatorControl({
       description: "Fügt Primärnährstoffe der Lösung zu bei geringem Leitwert.",
       icon: Zap,
       color: "peer-checked:bg-amber-500",
-      triggerDesc: "Dosing bei zu niedrigem EC-Wert"
+      triggerDesc: "Nur in 'mineralisch' Modus aktiv"
     },
     {
       key: "phDownPump",
@@ -102,7 +124,7 @@ export default function ActuatorControl({
 
   return (
     <div id="actuator-control-container" className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 backdrop-blur-md">
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-800/60 mb-6 gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between pb-6 border-b border-slate-800/60 mb-6 gap-4">
         <div>
           <h2 className="text-lg font-bold text-white flex items-center space-x-2">
             <Activity className="h-5 w-5 text-emerald-400" />
@@ -113,28 +135,54 @@ export default function ActuatorControl({
           </p>
         </div>
 
-        {/* Global Auto Toggler */}
-        <div className="flex items-center bg-slate-955/60 p-1 rounded-xl border border-slate-800 self-start md:self-auto">
-          <button
-            onClick={() => onToggleAutoMode(true)}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
-              isAutoMode
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            Automatikmodus
-          </button>
-          <button
-            onClick={() => onToggleAutoMode(false)}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
-              !isAutoMode
-                ? "bg-amber-500/15 text-amber-400 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.05)]"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            Manuelle Führung
-          </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Anbaumodus Toggler */}
+          <div className="flex items-center bg-slate-955/60 p-1 rounded-xl border border-slate-800 self-start">
+            <button
+              onClick={() => onToggleCultivationMode('bio')}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                cultivationMode === 'bio'
+                  ? "bg-green-500/15 text-green-400 border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.05)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Bio (Erde)
+            </button>
+            <button
+              onClick={() => onToggleCultivationMode('mineralisch')}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                cultivationMode === 'mineralisch'
+                  ? "bg-sky-500/15 text-sky-400 border border-sky-500/20 shadow-[0_0_10px_rgba(14,165,233,0.05)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Mineralisch
+            </button>
+          </div>
+
+          {/* Global Auto Toggler */}
+          <div className="flex items-center bg-slate-955/60 p-1 rounded-xl border border-slate-800 self-start">
+            <button
+              onClick={() => onToggleAutoMode(true)}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                isAutoMode
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Automatikmodus
+            </button>
+            <button
+              onClick={() => onToggleAutoMode(false)}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                !isAutoMode
+                  ? "bg-amber-500/15 text-amber-400 border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.05)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Manuell
+            </button>
+          </div>
         </div>
       </div>
 

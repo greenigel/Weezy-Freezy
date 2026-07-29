@@ -82,9 +82,11 @@ let controllerState: ControllerState = {
   },
   actuators: {
     light: true,
+    lightCoolingFan: true,
+    cooling: false,
+    co2Valve: true,
     fan: false,
     humidifier: false,
-    co2Valve: true,
     pump: false,
     phUpPump: false,
     phDownPump: false,
@@ -95,7 +97,8 @@ let controllerState: ControllerState = {
   activeProfile: currentProfile,
   lastTelemetryTime: new Date().toISOString(),
   wateringThresholdRun: false,
-  isAutoMode: true
+  isAutoMode: true,
+  cultivationMode: 'bio'
 };
 
 // Historical Logs database in memory
@@ -206,15 +209,24 @@ function runRegulationCore() {
     lightShouldBeOn = (hour % 24) < target.lightOnDuration;
   }
   
-  // 2. Temperature Regulation (Extractor FAN)
-  // Day / Night target temp
+  // 2. Temperature Regulation
   const currentTargetTemp = lightShouldBeOn ? target.targetTempDay : target.targetTempNight;
-  let fanShouldBeOn = false;
+  let fanShouldBeOn = false;     // Abluft
+  let coolingShouldBeOn = false; // Aktive Kühlung
+  
   if (sensors.temperature > currentTargetTemp + 0.5) {
-    fanShouldBeOn = true; // Temperature is hot, run extraction fan to cool
-  } else if (sensors.humidity > target.targetHumidity + 2.0) {
+    fanShouldBeOn = true; 
+  } 
+  if (sensors.temperature > currentTargetTemp + 1.5) {
+    coolingShouldBeOn = true; // Extra Kühlung zuschalten
+  }
+  
+  if (sensors.humidity > target.targetHumidity + 2.0) {
     fanShouldBeOn = true; // Humidity is high, run extraction fan to dehumidify
   }
+  
+  // Licht wasserkühlungsventilator runs whenever the light is on
+  let lightCoolingFanShouldBeOn = lightShouldBeOn;
   
   // 3. Humidifier Control
   let humidifierShouldBeOn = false;
@@ -223,9 +235,9 @@ function runRegulationCore() {
   }
   
   // 4. CO2 Solenoid Valve
-  // Plants only absorb CO2 during the lights-on phase
+  // Plants only absorb CO2 during the lights-on phase (and normally exhaust fan should be off to not waste it, but kept simple here)
   let co2ShouldBeOn = false;
-  if (lightShouldBeOn && sensors.co2 < target.targetCo2 - 50 && target.stage !== "drying") {
+  if (lightShouldBeOn && sensors.co2 < target.targetCo2 - 50 && target.stage !== "drying" && !fanShouldBeOn) {
     co2ShouldBeOn = true; 
   }
   
@@ -244,16 +256,18 @@ function runRegulationCore() {
   let ecNutrientShouldBeOn = false;
   
   if (target.stage !== "drying") {
-    // pH control (drift adjustment width 0.15)
+    // pH control
     if (sensors.ph < target.targetPh - 0.1) {
       phUpShouldBeOn = true; // pH too acidic, dose pH up
     } else if (sensors.ph > target.targetPh + 0.1) {
       phDownShouldBeOn = true; // pH too basic, dose pH down
     }
     
-    // EC / nutrient dosing
-    if (sensors.ec < target.targetEc - 0.1) {
-      ecNutrientShouldBeOn = true; // EC too low, dose A+B fertilizer
+    // Dünger nur anmischen wenn im 'mineralisch' Modus
+    if (controllerState.cultivationMode === 'mineralisch') {
+      if (sensors.ec < target.targetEc - 0.1) {
+        ecNutrientShouldBeOn = true;
+      }
     }
   }
 
@@ -267,9 +281,11 @@ function runRegulationCore() {
 
   controllerState.actuators = {
     light: applyState("light", lightShouldBeOn),
+    lightCoolingFan: applyState("lightCoolingFan", lightCoolingFanShouldBeOn),
+    cooling: applyState("cooling", coolingShouldBeOn),
+    co2Valve: applyState("co2Valve", co2ShouldBeOn),
     fan: applyState("fan", fanShouldBeOn),
     humidifier: applyState("humidifier", humidifierShouldBeOn),
-    co2Valve: applyState("co2Valve", co2ShouldBeOn),
     pump: applyState("pump", pumpShouldBeOn),
     phUpPump: applyState("phUpPump", phUpShouldBeOn),
     phDownPump: applyState("phDownPump", phDownShouldBeOn),
@@ -406,7 +422,7 @@ async function startServer() {
 
   // 3. Control API: Send manual toggle triggers over internet from dashboard
   app.post("/api/control", (req: Request, res: Response) => {
-    const { key, value, autoMode } = req.body;
+    const { key, value, autoMode, cultivationMode } = req.body;
 
     if (autoMode !== undefined) {
       controllerState.isAutoMode = !!autoMode;
@@ -416,6 +432,11 @@ async function startServer() {
       } else {
         addApiLog('command_received', 'web_ui', 'Automatik-Steuerung DEAKTIVIERT. Manuelle Steuerbefehle aktiv.');
       }
+    }
+    
+    if (cultivationMode !== undefined) {
+      controllerState.cultivationMode = cultivationMode;
+      addApiLog('command_received', 'web_ui', `Anbaumodus gewechselt auf: ${cultivationMode}`);
     }
 
     // Is there a physical relay manual override action?
