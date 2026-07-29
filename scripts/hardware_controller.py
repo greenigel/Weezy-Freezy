@@ -80,6 +80,7 @@ chan = None
 try:
     i2c = busio.I2C(board.SCL, board.SDA)
     ads = ADS.ADS1115(i2c)
+    ads.gain = 2/3
     # Verwende Kanal 0 für den Bodensensor
     chan = AnalogIn(ads, ads1x15.Pin.A0)
     print("ADS1115 erfolgreich initialisiert.")
