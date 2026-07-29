@@ -46,6 +46,15 @@ export default function ActuatorControl({
       description: "Aktiviert die aktive Kühlung der Leuchtmittel.",
       icon: Fan,
       color: "peer-checked:bg-sky-500",
+      triggerDesc: "Aktiv wenn Beleuchtung an (schaltet ab bei zu hoher RLF)"
+    },
+    {
+      key: "lightCoolingPump",
+      label: "Wasserpumpe Beleuchtung",
+      subLabel: "LED Kühlkreislauf",
+      description: "Pumpt das Wasser für die LED-Kühlung.",
+      icon: Droplets,
+      color: "peer-checked:bg-blue-600",
       triggerDesc: "Aktiv wenn Beleuchtung an"
     },
     {
