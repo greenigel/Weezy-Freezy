@@ -132,12 +132,14 @@ function runRegulationCore() {
   if (!isAuto) return; // if auto is disabled, respect manual overrides entirely
   
   const now = new Date();
-  const hour = now.getHours();
+  // Using Europe/Berlin timezone as the app language is German
+  const hourString = now.toLocaleString("en-US", { timeZone: "Europe/Berlin", hour: "numeric", hour12: false });
+  const hour = parseInt(hourString, 10);
   
   // 1. Light Cycle Control (Lichtzyklus)
   let lightShouldBeOn = false;
   if (target.lightOnDuration > 0) {
-    const startHour = target.lightOnStartTime || 6; // Default to 6 AM
+    const startHour = target.lightOnStartTime ?? 6; // Default to 6 AM
     const endHour = (startHour + target.lightOnDuration) % 24;
     
     if (startHour < endHour) {
