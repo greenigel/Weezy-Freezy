@@ -48,6 +48,7 @@ export default function App() {
   const [actuators, setActuators] = useState<ActuatorState>({
     light: false,
     lightCoolingFan: false,
+    lightCoolingPump: false,
     cooling: false,
     co2Valve: false,
     fan: false,
