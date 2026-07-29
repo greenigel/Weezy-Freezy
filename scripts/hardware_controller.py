@@ -103,11 +103,25 @@ def read_soil_moisture():
     if chan is None:
         return None
     try:
-        # Die Spannung (chan.voltage) oder der rohe Wert (chan.value) können genutzt werden.
-        # Dies muss je nach exaktem Output des CWT-Soil-HC-V5 kalibriert werden.
-        # Beispielhafte Kalibrierung (0V = 0%, 3V = 100%):
+        # Lese die Spannung des analogen Pins (A0)
         voltage = chan.voltage
-        moisture_percent = (voltage / 3.0) * 100.0
+        
+        # Für die Kalibrierung drucken wir die Roh-Spannung aus:
+        # Setze das Terminal-Kommando `sudo journalctl -u weezy-hardware -f` ein, um diese Werte zu sehen.
+        # Nimm den Wert, wenn der Sensor komplett trocken ist (z.B. V_MIN = 0.5V)
+        # Und den Wert, wenn er im Wasserglas steht (z.B. V_MAX = 2.8V)
+        print(f"[Sensor] Rohspannung Bodenfeuchte: {voltage:.2f}V")
+        
+        # --- KALIBRIERUNGSWERTE HIER ANPASSEN ---
+        V_MIN = 0.0  # Spannung bei 0% Feuchtigkeit (komplett trocken)
+        V_MAX = 3.0  # Spannung bei 100% Feuchtigkeit (Wasser)
+        
+        # Verhindere Division durch Null
+        if V_MAX == V_MIN:
+            return 0
+            
+        # Berechne den Prozentwert
+        moisture_percent = ((voltage - V_MIN) / (V_MAX - V_MIN)) * 100.0
         
         # Begrenze auf 0-100%
         moisture_percent = max(0, min(100, moisture_percent))
