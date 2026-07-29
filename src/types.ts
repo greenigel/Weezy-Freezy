@@ -3,13 +3,13 @@
  */
 
 export interface SensorData {
-  temperature: number;      // °C
-  humidity: number;         // %
-  co2: number;              // ppm
-  soilMoisture: number;     // %
-  ph: number;               // pH (0-14)
-  ec: number;               // mS/cm (Electrical Conductivity for Nutrient solution)
-  waterTemp: number;        // °C (Nutrient solution water temperature)
+  temperature: number | null;      // °C
+  humidity: number | null;         // %
+  co2: number | null;              // ppm
+  soilMoisture: number | null;     // %
+  ph: number | null;               // pH (0-14)
+  ec: number | null;               // mS/cm (Electrical Conductivity for Nutrient solution)
+  waterTemp: number | null;        // °C (Nutrient solution water temperature)
   recordedAt: string;       // ISO Timestamp
 }
 

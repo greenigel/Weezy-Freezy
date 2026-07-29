@@ -35,13 +35,13 @@ export default function App() {
   
   // Real-time states
   const [sensors, setSensors] = useState<SensorData>({
-    temperature: 0,
-    humidity: 0,
-    co2: 0,
-    soilMoisture: 0,
-    ph: 0,
-    ec: 0,
-    waterTemp: 0,
+    temperature: null,
+    humidity: null,
+    co2: null,
+    soilMoisture: null,
+    ph: null,
+    ec: null,
+    waterTemp: null,
     recordedAt: new Date().toISOString()
   });
   
@@ -452,113 +452,113 @@ export default function App() {
                     {/* 1. Cabinet Temp */}
                     <MetricCard
                       title="Raum-Temperatur"
-                      value={sensors.temperature.toFixed(1)}
+                      value={sensors.temperature !== null ? sensors.temperature.toFixed(1) : "---"}
                       unit="°C"
-                      target={sensors.temperature > 0 ? (actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight) : 0}
+                      target={actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight}
                       icon={<Thermometer className="h-6 w-6" />}
-                      status={evaluateSensorStatus(
+                      status={sensors.temperature !== null ? evaluateSensorStatus(
                         "temperature",
                         sensors.temperature,
                         actuators.light ? activeProfile.targetTempDay : activeProfile.targetTempNight,
                         1.5,
                         3.5
-                      )}
+                      ) : "inactive"}
                       description="Abluft springt an, sobald die Kammerwärme steigt."
                     />
 
                     {/* 2. Humidit */}
                     <MetricCard
                       title="Luftfeuchtigkeit (rH)"
-                      value={sensors.humidity.toFixed(1)}
+                      value={sensors.humidity !== null ? sensors.humidity.toFixed(1) : "---"}
                       unit="%"
                       target={activeProfile.targetHumidity}
                       icon={<Droplet className="h-6 w-6" />}
-                      status={evaluateSensorStatus(
+                      status={sensors.humidity !== null ? evaluateSensorStatus(
                         "humidity",
                         sensors.humidity,
                         activeProfile.targetHumidity,
                         5.0,
                         12.0
-                      )}
+                      ) : "inactive"}
                       description="Humidier speist Aerosol ein. Lüfter lüftet bei Feuchtepeaks."
                     />
 
                     {/* 3. CO2 */}
                     <MetricCard
                       title="CO² Gehalt"
-                      value={sensors.co2}
+                      value={sensors.co2 !== null ? sensors.co2 : "---"}
                       unit="ppm"
                       target={activeProfile.targetCo2}
                       icon={<Sliders className="h-6 w-6" />}
-                      status={evaluateSensorStatus(
+                      status={sensors.co2 !== null ? evaluateSensorStatus(
                         "co2",
                         sensors.co2,
                         activeProfile.targetCo2,
                         120,
                         350
-                      )}
+                      ) : "inactive"}
                       description="Relaisventil spritzt CO2 nur unter künstlicher Beleuchtung."
                     />
 
                     {/* 4. Soil moisture */}
                     <MetricCard
                       title="Bodenfeuchtigkeit"
-                      value={sensors.soilMoisture.toFixed(1)}
+                      value={sensors.soilMoisture !== null ? sensors.soilMoisture.toFixed(1) : "---"}
                       unit="%"
                       target={activeProfile.targetSoilMoisture}
                       icon={<Waves className="h-6 w-6" />}
-                      status={evaluateSensorStatus(
+                      status={sensors.soilMoisture !== null ? evaluateSensorStatus(
                         "soilMoisture",
                         sensors.soilMoisture,
                         activeProfile.targetSoilMoisture,
                         6.0,
                         15.0
-                      )}
+                      ) : "inactive"}
                       description="Substratfeuchtigkeit des Teku-Topfes über kapazitiven SPI-Sensor."
                     />
 
                     {/* 5. ph-value */}
                     <MetricCard
                       title="Wasser pH-Wert"
-                      value={sensors.ph.toFixed(2)}
+                      value={sensors.ph !== null ? sensors.ph.toFixed(2) : "---"}
                       unit="pH"
                       target={activeProfile.targetPh}
                       icon={<Sliders className="h-6 w-6" />}
-                      status={evaluateSensorStatus(
+                      status={sensors.ph !== null ? evaluateSensorStatus(
                         "ph",
                         sensors.ph,
                         activeProfile.targetPh,
                         0.15,
                         0.4
-                      )}
+                      ) : "inactive"}
                       description="Wichtig für Ionenaufnahme. Dosierpumpe spritzt Korrektur-Säuren."
                     />
 
                     {/* 6. EC electrical conduct */}
                     <MetricCard
                       title="Wasser Leitwert (EC)"
-                      value={sensors.ec.toFixed(2)}
+                      value={sensors.ec !== null ? sensors.ec.toFixed(2) : "---"}
                       unit="mS"
                       target={activeProfile.targetEc}
                       icon={<Droplet className="h-6 w-6" />}
-                      status={evaluateSensorStatus(
+                      status={sensors.ec !== null ? evaluateSensorStatus(
                         "ec",
                         sensors.ec,
                         activeProfile.targetEc,
                         0.15,
                         0.35
-                      )}
+                      ) : "inactive"}
                       description="Nährstoffkonzentration des Hydroponiktanks."
                     />
 
                     {/* 7. Water temperature */}
                     <MetricCard
                       title="Wassertemperatur"
-                      value={sensors.waterTemp.toFixed(1)}
+                      value={sensors.waterTemp !== null ? sensors.waterTemp.toFixed(1) : "---"}
                       unit="°C"
                       target="18 - 21"
                       icon={<Thermometer className="h-6 w-6" />}
-                      status={sensors.waterTemp > 23 ? "warning" : sensors.waterTemp < 15 ? "warning" : "success"}
+                      status={sensors.waterTemp === null ? "inactive" : (sensors.waterTemp > 23 ? "warning" : sensors.waterTemp < 15 ? "warning" : "success")}
                       description="Kühle Nährlösung speichert mehr Sauerstoff und beugt Wurzelfäule vor."
                     />
 
