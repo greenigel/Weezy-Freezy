@@ -63,6 +63,7 @@ SERVER_URL_TELEMETRY = "http://localhost:3000/api/telemetry"
 # GPIO Pin Mapping
 PIN_LIGHT = 17
 PIN_LIGHT_COOLING = 27
+PIN_LIGHT_COOLING_PUMP = 24
 PIN_COOLING = 22
 PIN_CO2 = 23
 
@@ -71,6 +72,7 @@ GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(PIN_LIGHT, GPIO.OUT)
 GPIO.setup(PIN_LIGHT_COOLING, GPIO.OUT)
+GPIO.setup(PIN_LIGHT_COOLING_PUMP, GPIO.OUT)
 GPIO.setup(PIN_COOLING, GPIO.OUT)
 GPIO.setup(PIN_CO2, GPIO.OUT)
 
@@ -172,6 +174,7 @@ def main():
                 # Relais schalten
                 set_relais(PIN_LIGHT, actuators.get("light", False))
                 set_relais(PIN_LIGHT_COOLING, actuators.get("lightCoolingFan", False))
+                set_relais(PIN_LIGHT_COOLING_PUMP, actuators.get("lightCoolingPump", False))
                 set_relais(PIN_COOLING, actuators.get("cooling", False))
                 set_relais(PIN_CO2, actuators.get("co2Valve", False))
                 
