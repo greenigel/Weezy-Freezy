@@ -185,8 +185,11 @@ def capture_webcam():
 
     while True:
         try:
-            os.system("fswebcam -r 1280x720 --no-banner /tmp/webcam_tmp.jpg >/dev/null 2>&1")
-            os.system("mv /tmp/webcam_tmp.jpg /tmp/webcam.jpg")
+            # -d /dev/video0 explicit device
+            # -S 10 to skip initial frames and let the camera adjust exposure
+            res = os.system("fswebcam -d /dev/video0 -r 1280x720 -S 10 --no-banner /tmp/webcam_tmp.jpg >/tmp/webcam_log.txt 2>&1")
+            if res == 0:
+                os.system("mv /tmp/webcam_tmp.jpg /tmp/webcam.jpg")
             
             # Save timelapse frame every 10 minutes (600 seconds)
             current_time = time.time()

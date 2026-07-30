@@ -494,7 +494,11 @@ async function startServer() {
     if (fs.existsSync(camPath)) {
       res.sendFile(camPath);
     } else {
-      res.status(404).send("No webcam image found");
+      let msg = "No webcam image found.";
+      if (fs.existsSync("/tmp/webcam_log.txt")) {
+         msg += "\n\nLogs:\n" + fs.readFileSync("/tmp/webcam_log.txt", "utf-8");
+      }
+      res.status(404).type('text/plain').send(msg);
     }
   });
 
