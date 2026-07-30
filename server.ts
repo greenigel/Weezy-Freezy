@@ -1,9 +1,13 @@
 import express, { Request, Response } from "express";
 import path from "path";
+import fs from "fs";
 import { ControllerState, SensorData, ActuatorState, GrowProfile, ApiLogEntry } from "./src/types";
 
 // Polyfill for static paths
 const __dirname = path.resolve();
+
+// Persistence file
+const DATA_FILE = path.join(__dirname, 'weezy_data.json');
 
 // Standard Grow Profiles (Strain Profile Presets)
 const PRESET_PROFILES: GrowProfile[] = [
@@ -110,6 +114,44 @@ let apiLogs: ApiLogEntry[] = [];
 // Optional: Seed initial analytical data (7 days of historical readings, 1 per hour = 168 points)
 // Removed to avoid polluting the graph when real data starts coming in.
 // telemetryHistory = []; 
+
+// --- Persistence Logic ---
+function saveData() {
+  try {
+    const data = {
+      controllerState,
+      telemetryHistory,
+      apiLogs,
+      activeProfilesList
+    };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data), 'utf8');
+  } catch (e) {
+    console.error("Failed to save data:", e);
+  }
+}
+
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      if (data.controllerState) controllerState = data.controllerState;
+      if (data.telemetryHistory) telemetryHistory = data.telemetryHistory;
+      if (data.apiLogs) apiLogs = data.apiLogs;
+      if (data.activeProfilesList) activeProfilesList = data.activeProfilesList;
+      
+      // Update references
+      const profile = activeProfilesList.find(p => p.id === controllerState.activeProfileId) || activeProfilesList[0];
+      currentProfile = profile;
+      controllerState.activeProfile = profile;
+    }
+  } catch (e) {
+    console.error("Failed to load data, starting fresh:", e);
+  }
+}
+
+// Load data immediately on startup
+loadData();
+// -------------------------
 
 // Add api log entry helper
 function addApiLog(type: ApiLogEntry['type'], source: ApiLogEntry['source'], payload: string) {
@@ -297,6 +339,8 @@ async function startServer() {
     // Run custom automated regulation logic
     runRegulationCore();
 
+    saveData();
+
     // Send back current desired actions for relays (this is how the Pi knows what to turn on and off!)
     res.json({
       status: "success",
@@ -343,6 +387,9 @@ async function startServer() {
     }
 
     runRegulationCore();
+
+    saveData();
+
     res.json({
       status: "success",
       controllerState
@@ -380,6 +427,8 @@ async function startServer() {
       runRegulationCore();
     }
 
+    saveData();
+
     res.json({ status: "success", profiles: activeProfilesList });
   });
 
@@ -401,6 +450,9 @@ async function startServer() {
     addApiLog('profile_change', 'web_ui', `Aktiviertes Strain Profil gewechselt auf: '${profile.name}'`);
     
     runRegulationCore();
+    
+    saveData();
+    
     res.json({ status: "success", controllerState });
   });
 
@@ -418,6 +470,7 @@ async function startServer() {
   app.post("/api/history/reset", (req: Request, res: Response) => {
     seedHistoricalData();
     addApiLog('command_received', 'web_ui', 'Historiendatenbank zurückgesetzt und neu befüllt.');
+    saveData();
     res.json({ status: "success", historySize: telemetryHistory.length });
   });
 

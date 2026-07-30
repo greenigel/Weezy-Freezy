@@ -68,6 +68,28 @@ Environment=PATH=/usr/bin:/usr/local/bin:/home/$APP_USER/.nvm/versions/node/v20.
 WantedBy=multi-user.target
 EOF
 
+# 4. Daily Restart Timer (4:00 AM)
+cat <<EOF | sudo tee /etc/systemd/system/weezy-restart.service
+[Unit]
+Description=Restart Weezy-Freezy Services
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart weezy-server.service weezy-hardware.service weezy-bme280.service
+EOF
+
+cat <<EOF | sudo tee /etc/systemd/system/weezy-restart.timer
+[Unit]
+Description=Daily restart of Weezy-Freezy services at 4:00 AM
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
 echo "Lade Systemd Daemon neu..."
 sudo systemctl daemon-reload
 
@@ -75,12 +97,14 @@ echo "Aktiviere Services für den automatischen Start beim Systemstart..."
 sudo systemctl enable weezy-server.service
 sudo systemctl enable weezy-hardware.service
 sudo systemctl enable weezy-bme280.service
+sudo systemctl enable weezy-restart.timer
 
 echo "Starte Services jetzt..."
 sudo systemctl restart weezy-server.service
 sleep 3
 sudo systemctl restart weezy-hardware.service
 sudo systemctl restart weezy-bme280.service
+sudo systemctl start weezy-restart.timer
 
 echo "================================================================"
 echo "Fertig! Die Skripte laufen jetzt automatisch im Hintergrund."
