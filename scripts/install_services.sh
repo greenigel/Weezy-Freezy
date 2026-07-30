@@ -11,6 +11,10 @@ if [ ! -f "server.ts" ]; then
     exit 1
 fi
 
+echo "Installiere Systemabhängigkeiten (fswebcam und ffmpeg)..."
+sudo apt-get update
+sudo apt-get install -y fswebcam ffmpeg
+
 echo "Richte Weezy-Freezy Autostart-Services für User '$APP_USER' im Verzeichnis '$APP_DIR' ein..."
 
 # 1. Hardware Controller Service

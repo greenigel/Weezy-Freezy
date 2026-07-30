@@ -47,6 +47,7 @@ export default function App() {
   
   const [actuators, setActuators] = useState<ActuatorState>({
     light: false,
+    lightIntensity: 0,
     lightCoolingFan: false,
     lightCoolingPump: false,
     cooling: false,
@@ -173,7 +174,7 @@ export default function App() {
   // === MUTATION TRIGGERS ON SERVER ===
 
   // Manual Trigger: Toggle physical relay states
-  const handleToggleActuator = async (key: keyof ActuatorState, value: boolean) => {
+  const handleToggleActuator = async (key: keyof ActuatorState, value: boolean | number) => {
     // Pessimistic state prediction for lagless toggling
     setActuators(prev => ({ ...prev, [key]: value }));
     try {

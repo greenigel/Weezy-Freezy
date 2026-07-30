@@ -1,12 +1,13 @@
+import React from "react";
 import { ActuatorState } from "../types";
-import { Lightbulb, Wind, CloudRain, Shield, Activity, Droplets, ArrowUp, ArrowDown, Zap, ThermometerSnowflake, Fan } from "lucide-react";
+import { Lightbulb, Wind, CloudRain, Shield, Activity, Droplets, ArrowUp, ArrowDown, Zap, ThermometerSnowflake, Fan, Sun } from "lucide-react";
 
 interface ActuatorControlProps {
   actuators: ActuatorState;
-  overrideActuators: Partial<Record<keyof ActuatorState, boolean>>;
+  overrideActuators: Partial<Record<keyof ActuatorState, boolean | number>>;
   isAutoMode: boolean;
   cultivationMode: 'bio' | 'mineralisch';
-  onToggleActuator: (key: keyof ActuatorState, value: boolean) => void;
+  onToggleActuator: (key: keyof ActuatorState, value: boolean | number) => void;
   onToggleAutoMode: (autoMode: boolean) => void;
   onToggleCultivationMode: (mode: 'bio' | 'mineralisch') => void;
 }
@@ -203,9 +204,9 @@ export default function ActuatorControl({
           const isOverriddenTo = overrideActuators[spec.key];
 
           return (
+            <React.Fragment key={spec.key}>
             <div
               id={`actuator-card-${spec.key}`}
-              key={spec.key}
               className={`flex items-start justify-between rounded-xl border p-4.5 transition-all duration-200 ${
                 isActuatorOn
                   ? "border-slate-700/60 bg-slate-850/30 shadow-inner"
@@ -243,12 +244,11 @@ export default function ActuatorControl({
                 </div>
               </div>
 
-              {/* Toggle Switch */}
               <div className="flex flex-col items-end justify-between self-stretch shrink-0">
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={isActuatorOn}
+                    checked={isActuatorOn as boolean}
                     onChange={(e) => onToggleActuator(spec.key, e.target.checked)}
                     className="sr-only peer"
                   />
@@ -257,7 +257,7 @@ export default function ActuatorControl({
                 
                 {isActuatorOn ? (
                   <span className="text-2xs font-semibold text-emerald-400 flex items-center space-x-1 mt-auto">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 pulse-green"></span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>AN</span>
                   </span>
                 ) : (
@@ -268,6 +268,28 @@ export default function ActuatorControl({
                 )}
               </div>
             </div>
+            {spec.key === 'light' && (
+              <div className="w-full col-span-1 md:col-span-2 bg-slate-900/10 border border-slate-800 p-4 rounded-xl flex items-center justify-between space-x-4 mb-2">
+                 <div className="flex items-center space-x-3 text-slate-400">
+                    <Sun className="w-5 h-5" />
+                    <span className="text-sm font-semibold">1-10V PWM Dimmung</span>
+                 </div>
+                 <div className="flex-1 max-w-sm flex items-center space-x-4">
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={(actuators.lightIntensity as number) || 0} 
+                      onChange={(e) => onToggleActuator('lightIntensity' as any, parseInt(e.target.value, 10))}
+                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    />
+                    <span className="text-sm font-bold text-white w-12 text-right">
+                      {actuators.lightIntensity || 0}%
+                    </span>
+                 </div>
+              </div>
+            )}
+            </React.Fragment>
           );
         })}
       </div>

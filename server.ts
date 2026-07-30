@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
+import { exec } from "child_process";
 import { ControllerState, SensorData, ActuatorState, GrowProfile, ApiLogEntry } from "./src/types";
 
 // Polyfill for static paths
@@ -17,6 +18,7 @@ const PRESET_PROFILES: GrowProfile[] = [
     description: "Klassisches Profil für die Blütephase von OG Kush. Erfordert niedrigere Luftfeuchtigkeit zur Vorbeugung von Schimmel und hohe CO2-Sättigung.",
     stage: "flowering",
     lightOnDuration: 12,
+    targetLightIntensity: 100,
     targetTempDay: 24.5,
     targetTempNight: 19.0,
     targetHumidity: 45.0,
@@ -31,6 +33,7 @@ const PRESET_PROFILES: GrowProfile[] = [
     description: "Kräftiges Wachstumsprofil für White Widow in der vegetativen Phase. Hohe Luftfeuchtigkeit und 18 Stunden Licht stimulieren das Blattwerk.",
     stage: "vegetative",
     lightOnDuration: 18,
+    targetLightIntensity: 80,
     targetTempDay: 26.0,
     targetTempNight: 21.0,
     targetHumidity: 65.0,
@@ -45,6 +48,7 @@ const PRESET_PROFILES: GrowProfile[] = [
     description: "Sehr behutsames Profil für frisch gekeimte Northern Lights Sämlinge. Sehr hohe Luftfeuchtigkeit für die Wurzelentwicklung.",
     stage: "seedling",
     lightOnDuration: 18,
+    targetLightIntensity: 40,
     targetTempDay: 23.5,
     targetTempNight: 20.0,
     targetHumidity: 75.0,
@@ -59,6 +63,7 @@ const PRESET_PROFILES: GrowProfile[] = [
     description: "Ermöglicht eine schonende, langsame Trocknung im Kälte-Kühlschrank. Keine Beleuchtung, kühle Temperaturen und geregelte Luftfeuchte.",
     stage: "drying",
     lightOnDuration: 0,
+    targetLightIntensity: 0,
     targetTempDay: 16.0,
     targetTempNight: 16.0,
     targetHumidity: 55.0,
@@ -86,6 +91,7 @@ let controllerState: ControllerState = {
   },
   actuators: {
     light: true,
+    lightIntensity: 100,
     lightCoolingFan: true,
     lightCoolingPump: true,
     cooling: false,
@@ -194,7 +200,7 @@ function runRegulationCore() {
       lightShouldBeOn = hour >= startHour || hour < endHour;
     }
   }
-  
+
   // 2. Temperature Regulation & Dehumidification (Closed Fridge System)
   const currentTargetTemp = lightShouldBeOn ? target.targetTempDay : target.targetTempNight;
   
@@ -277,8 +283,16 @@ function runRegulationCore() {
     return autoValue; // default to automatic calculated state
   };
 
+  const applyIntensity = (key: keyof ActuatorState, autoValue: number): number => {
+    if (controllerState.overrideActuators[key] !== undefined) {
+      return controllerState.overrideActuators[key] as number;
+    }
+    return autoValue;
+  };
+
   controllerState.actuators = {
     light: applyState("light", lightShouldBeOn),
+    lightIntensity: applyIntensity("lightIntensity", lightShouldBeOn ? (target.targetLightIntensity ?? 100) : 0),
     lightCoolingFan: applyState("lightCoolingFan", lightCoolingFanShouldBeOn),
     lightCoolingPump: applyState("lightCoolingPump", lightCoolingPumpShouldBeOn),
     cooling: applyState("cooling", coolingShouldBeOn),
@@ -379,11 +393,11 @@ async function startServer() {
       const actuatorKey = key as keyof ActuatorState;
       if (controllerState.isAutoMode) {
         // Enforce override flag
-        controllerState.overrideActuators[actuatorKey] = value;
+        (controllerState.overrideActuators as any)[actuatorKey] = value;
       } else {
-        controllerState.actuators[actuatorKey] = value;
+        (controllerState.actuators as any)[actuatorKey] = value;
       }
-      addApiLog('user_override', 'web_ui', `Relais '${key}' manuell auf ${value ? 'AN' : 'AUS'} geschaltet.`);
+      addApiLog('user_override', 'web_ui', `Relais '${key}' manuell auf ${value} geschaltet.`);
     }
 
     runRegulationCore();
@@ -468,10 +482,76 @@ async function startServer() {
 
   // 9. Reset and reseed data helper
   app.post("/api/history/reset", (req: Request, res: Response) => {
-    seedHistoricalData();
-    addApiLog('command_received', 'web_ui', 'Historiendatenbank zurückgesetzt und neu befüllt.');
+    telemetryHistory = [];
+    addApiLog('command_received', 'web_ui', 'Historiendatenbank zurückgesetzt.');
     saveData();
     res.json({ status: "success", historySize: telemetryHistory.length });
+  });
+
+  // 10. Webcam stream
+  app.get("/api/webcam", (req: Request, res: Response) => {
+    const camPath = "/tmp/webcam.jpg";
+    if (fs.existsSync(camPath)) {
+      res.sendFile(camPath);
+    } else {
+      res.status(404).send("No webcam image found");
+    }
+  });
+
+  // 11. Timelapse API
+  let isGeneratingTimelapse = false;
+  const TIMELAPSE_DIR = path.join(__dirname, 'timelapse_frames');
+  const VIDEO_OUT = path.join(__dirname, 'timelapse.mp4');
+
+  app.get("/api/timelapse/status", (req: Request, res: Response) => {
+    let frameCount = 0;
+    if (fs.existsSync(TIMELAPSE_DIR)) {
+      frameCount = fs.readdirSync(TIMELAPSE_DIR).filter(f => f.endsWith('.jpg')).length;
+    }
+    const hasVideo = fs.existsSync(VIDEO_OUT);
+    res.json({ isGenerating: isGeneratingTimelapse, frameCount, hasVideo });
+  });
+
+  app.post("/api/timelapse/generate", (req: Request, res: Response) => {
+    if (isGeneratingTimelapse) {
+      return res.status(400).json({ status: "error", message: "Already generating" });
+    }
+    
+    if (!fs.existsSync(TIMELAPSE_DIR)) {
+      return res.status(400).json({ status: "error", message: "No frames directory found" });
+    }
+    
+    const frames = fs.readdirSync(TIMELAPSE_DIR).filter(f => f.endsWith('.jpg'));
+    if (frames.length === 0) {
+      return res.status(400).json({ status: "error", message: "No frames available" });
+    }
+
+    isGeneratingTimelapse = true;
+    addApiLog('command_received', 'web_ui', `Timelapse-Generierung gestartet (${frames.length} Bilder)`);
+
+    // Using ffmpeg to create a video from a glob or sequence.
+    // Since files are named frame_YYYYMMDD_HHMMSS.jpg, we can use pattern type glob
+    const cmd = `ffmpeg -y -framerate 10 -pattern_type glob -i '${TIMELAPSE_DIR}/*.jpg' -c:v libx264 -pix_fmt yuv420p '${VIDEO_OUT}'`;
+    
+    exec(cmd, (error, stdout, stderr) => {
+      isGeneratingTimelapse = false;
+      if (error) {
+        console.error(`Timelapse generation error: ${error.message}`);
+        addApiLog('command_received', 'web_ui', `Fehler bei Timelapse-Generierung: ${error.message}`);
+      } else {
+        addApiLog('command_received', 'web_ui', 'Timelapse-Video erfolgreich erstellt.');
+      }
+    });
+
+    res.json({ status: "success", message: "Generation started" });
+  });
+
+  app.get("/api/timelapse/video", (req: Request, res: Response) => {
+    if (fs.existsSync(VIDEO_OUT)) {
+      res.sendFile(VIDEO_OUT);
+    } else {
+      res.status(404).send("No video found");
+    }
   });
 
   // Vite integration middleware (only in explicit development mode)

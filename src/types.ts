@@ -15,6 +15,7 @@ export interface SensorData {
 
 export interface ActuatorState {
   light: boolean;           // ON / OFF (Licht)
+  lightIntensity: number;   // 0-100% PWM Dimming
   lightCoolingFan: boolean; // ON / OFF (Licht wasserkühlungsventilator)
   lightCoolingPump: boolean;// ON / OFF (Licht wasserkühlungspumpe)
   cooling: boolean;         // ON / OFF (Kühlung)
@@ -32,9 +33,11 @@ export interface GrowProfile {
   name: string;
   description: string;
   stage: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'drying';
+
   // Target values
   lightOnStartTime?: number;  // Hour of day to start light cycle (0-23)
   lightOnDuration: number;    // Hours, e.g., 18 for veg, 12 for flower
+  targetLightIntensity?: number; // 0-100% (PWM)
   targetTempDay: number;      // °C
   targetTempNight: number;    // °C
   targetHumidity: number;     // %
@@ -47,7 +50,7 @@ export interface GrowProfile {
 export interface ControllerState {
   currentSensors: SensorData;
   actuators: ActuatorState;
-  overrideActuators: Partial<Record<keyof ActuatorState, boolean>>; // null or boolean for custom manual overrides
+  overrideActuators: Partial<Record<keyof ActuatorState, boolean | number>>; // null or boolean/number for custom manual overrides
   activeProfileId: string;
   activeProfile: GrowProfile;
   lastTelemetryTime: string;

@@ -24,6 +24,9 @@ Verkabelung ADS1115 (für CWT-Soil-HC-V5 Sensor):
 import time
 import requests
 import sys
+import os
+import threading
+import subprocess
 
 try:
     import board
@@ -62,6 +65,7 @@ SERVER_URL_TELEMETRY = "http://localhost:3000/api/telemetry"
 
 # GPIO Pin Mapping
 PIN_LIGHT = 17
+PIN_LIGHT_PWM = 18 # Hardware PWM Pin für 1-10V Dimmung
 PIN_LIGHT_COOLING = 27
 PIN_LIGHT_COOLING_PUMP = 24
 PIN_COOLING = 22
@@ -70,11 +74,24 @@ PIN_CO2 = 23
 # Initialisiere GPIO
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
+
 GPIO.setup(PIN_LIGHT, GPIO.OUT)
+GPIO.setup(PIN_LIGHT_PWM, GPIO.OUT)
 GPIO.setup(PIN_LIGHT_COOLING, GPIO.OUT)
 GPIO.setup(PIN_LIGHT_COOLING_PUMP, GPIO.OUT)
 GPIO.setup(PIN_COOLING, GPIO.OUT)
 GPIO.setup(PIN_CO2, GPIO.OUT)
+
+# PWM Instanz (1 kHz Frequenz)
+try:
+    light_pwm = GPIO.PWM(PIN_LIGHT_PWM, 1000)
+    light_pwm.start(0)
+except AttributeError:
+    # Fallback for DummyGPIO
+    class DummyPWM:
+        def start(self, dc): pass
+        def ChangeDutyCycle(self, dc): pass
+    light_pwm = DummyPWM()
 
 # Initialisiere I2C und ADS1115
 ads = None
@@ -161,8 +178,31 @@ def read_soil_moisture():
         print(f"Fehler beim Lesen des Bodensensors: {e}")
         return None
 
+def capture_webcam():
+    timelapse_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "timelapse_frames")
+    os.makedirs(timelapse_dir, exist_ok=True)
+    last_timelapse_save = 0
+
+    while True:
+        try:
+            os.system("fswebcam -r 1280x720 --no-banner /tmp/webcam_tmp.jpg >/dev/null 2>&1")
+            os.system("mv /tmp/webcam_tmp.jpg /tmp/webcam.jpg")
+            
+            # Save timelapse frame every 10 minutes (600 seconds)
+            current_time = time.time()
+            if current_time - last_timelapse_save > 600:
+                timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+                tl_filename = os.path.join(timelapse_dir, f"frame_{timestamp_str}.jpg")
+                os.system(f"cp /tmp/webcam.jpg {tl_filename}")
+                last_timelapse_save = current_time
+        except Exception as e:
+            pass
+        time.sleep(10)
+
 def main():
     print("Hardware Controller gestartet...")
+    t = threading.Thread(target=capture_webcam, daemon=True)
+    t.start()
     while True:
         try:
             # 1. Hole Soll-Zustand der Relais vom Server
@@ -173,6 +213,15 @@ def main():
                 
                 # Relais schalten
                 set_relais(PIN_LIGHT, actuators.get("light", False))
+                
+                intensity = actuators.get("lightIntensity", 0)
+                if not actuators.get("light", False):
+                    intensity = 0
+                try:
+                    light_pwm.ChangeDutyCycle(intensity)
+                except:
+                    pass
+
                 set_relais(PIN_LIGHT_COOLING, actuators.get("lightCoolingFan", False))
                 set_relais(PIN_LIGHT_COOLING_PUMP, actuators.get("lightCoolingPump", False))
                 set_relais(PIN_COOLING, actuators.get("cooling", False))
