@@ -99,7 +99,8 @@ let controllerState: ControllerState = {
   lastTelemetryTime: new Date().toISOString(),
   wateringThresholdRun: false,
   isAutoMode: true,
-  cultivationMode: 'bio'
+  cultivationMode: 'bio',
+  simulatedHour: null
 };
 
 // Historical Logs database in memory
@@ -134,7 +135,9 @@ function runRegulationCore() {
   const now = new Date();
   // Using Europe/Berlin timezone as the app language is German
   const hourString = now.toLocaleString("en-US", { timeZone: "Europe/Berlin", hour: "numeric", hour12: false });
-  const hour = parseInt(hourString, 10);
+  const hour = controllerState.simulatedHour !== null && controllerState.simulatedHour !== undefined 
+    ? controllerState.simulatedHour 
+    : parseInt(hourString, 10);
   
   // 1. Light Cycle Control (Lichtzyklus)
   let lightShouldBeOn = false;
@@ -305,7 +308,12 @@ async function startServer() {
 
   // 3. Control API: Send manual toggle triggers over internet from dashboard
   app.post("/api/control", (req: Request, res: Response) => {
-    const { key, value, autoMode, cultivationMode } = req.body;
+    const { key, value, autoMode, cultivationMode, simulatedHour } = req.body;
+
+    if (simulatedHour !== undefined) {
+      controllerState.simulatedHour = simulatedHour;
+      addApiLog('command_received', 'web_ui', simulatedHour !== null ? `Simulierte Uhrzeit gesetzt auf: ${simulatedHour}:00` : 'Uhrzeit-Simulation deaktiviert. Reale Zeit aktiv.');
+    }
 
     if (autoMode !== undefined) {
       controllerState.isAutoMode = !!autoMode;

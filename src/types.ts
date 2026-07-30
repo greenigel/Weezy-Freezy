@@ -54,6 +54,7 @@ export interface ControllerState {
   wateringThresholdRun: boolean; // if we are in active irrigation cycle
   isAutoMode: boolean; // false if user took manual control of everything
   cultivationMode: 'bio' | 'mineralisch'; // bio = ohne Düngeranmischung, mineralisch = mit Dünger
+  simulatedHour?: number | null; // null = real time
 }
 
 export interface ApiLogEntry {

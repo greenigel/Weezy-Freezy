@@ -63,6 +63,7 @@ export default function App() {
   const [activeProfile, setActiveProfile] = useState<GrowProfile | null>(null);
   const [isAutoMode, setIsAutoMode] = useState(true);
   const [cultivationMode, setCultivationMode] = useState<'bio' | 'mineralisch'>('bio');
+  const [simulatedHour, setSimulatedHour] = useState<number | null>(null);
   const [lastTelemetryTime, setLastTelemetryTime] = useState("");
   
   // Lists
@@ -96,6 +97,7 @@ export default function App() {
         setActiveProfile(data.activeProfile);
         setIsAutoMode(data.isAutoMode);
         setCultivationMode(data.cultivationMode);
+        setSimulatedHour(data.simulatedHour ?? null);
         setLastTelemetryTime(data.lastTelemetryTime);
         setIsOffline(false);
       } catch (err) {
@@ -230,6 +232,24 @@ export default function App() {
     }
   };
 
+  const handleSimulateTime = async (hour: number | null) => {
+    setSimulatedHour(hour);
+    try {
+      const res = await fetch("/api/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ simulatedHour: hour })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSimulatedHour(data.controllerState.simulatedHour ?? null);
+        setActuators(data.controllerState.actuators);
+      }
+    } catch (e) {
+      console.error("Simulated hour toggle failed", e);
+    }
+  };
+
   // Change active profile selection
   const handleSelectProfile = async (profileId: string) => {
     try {
@@ -339,6 +359,22 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Time Simulation */}
+            <div className="flex items-center space-x-2 bg-slate-950/80 rounded-xl border border-slate-800/60 px-3.5 py-1.5 text-3xs font-mono font-bold shrink-0">
+              <Clock className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+              <span className="text-slate-400">Zeit-Simulation:</span>
+              <select 
+                className="bg-transparent text-sky-400 border-none outline-none cursor-pointer p-0 font-mono text-3xs font-bold"
+                value={simulatedHour ?? ""}
+                onChange={(e) => handleSimulateTime(e.target.value ? parseInt(e.target.value, 10) : null)}
+              >
+                <option value="">Aus (Reale Zeit)</option>
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <option key={i} value={i}>{i}:00</option>
+                ))}
+              </select>
+            </div>
+
             {/* Connection state details */}
             <div className="flex items-center space-x-2 bg-slate-950/80 rounded-xl border border-slate-800/60 px-3.5 py-1.5 text-3xs font-mono text-slate-450 font-bold shrink-0">
               <Wifi className={`h-3.5 w-3.5 ${isOffline ? "text-rose-500" : "text-emerald-400"} shrink-0`} />
