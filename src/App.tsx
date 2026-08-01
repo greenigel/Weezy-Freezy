@@ -13,6 +13,7 @@ import GrowCharts from "./components/GrowCharts";
 import ProfileManager from "./components/ProfileManager";
 import ApiDeveloperPanel from "./components/ApiDeveloperPanel";
 import CultivationAssistant from "./components/CultivationAssistant";
+import OverviewTab from "./components/OverviewTab";
 
 import { 
   Thermometer, 
@@ -31,7 +32,7 @@ import {
 } from "lucide-react";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "charts" | "profiles" | "api">("dashboard");
+  const [activeTab, setActiveTab] = useState<"overview" | "dashboard" | "charts" | "profiles" | "api">("overview");
   
   // Real-time states
   const [sensors, setSensors] = useState<SensorData>({
@@ -65,6 +66,7 @@ export default function App() {
   const [isAutoMode, setIsAutoMode] = useState(true);
   const [cultivationMode, setCultivationMode] = useState<'bio' | 'mineralisch'>('bio');
   const [simulatedHour, setSimulatedHour] = useState<number | null>(null);
+  const [activeRecipeName, setActiveRecipeName] = useState<string>("Standard");
   const [lastTelemetryTime, setLastTelemetryTime] = useState("");
   
   // Lists
@@ -96,6 +98,7 @@ export default function App() {
         setActuators(data.actuators);
         setOverrideActuators(data.overrideActuators || {});
         setActiveProfile(data.activeProfile);
+        setActiveRecipeName(data.activeRecipeName || "Standard");
         setIsAutoMode(data.isAutoMode);
         setCultivationMode(data.cultivationMode);
         setSimulatedHour(data.simulatedHour ?? null);
@@ -392,8 +395,9 @@ export default function App() {
             {/* Active profile badge */}
             {activeProfile && (
               <div className="hidden lg:flex items-center space-x-2 bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-3.5 py-1.5 text-3xs shrink-0 select-none">
-                <span className="text-slate-400 font-bold">Strain:</span>
-                <span className="text-emerald-400 font-extrabold">{activeProfile.name}</span>
+                <span className="text-slate-400 font-bold">Rezept:</span>
+                <span className="text-emerald-400 font-extrabold">{activeRecipeName || "Standard"}</span>
+                <span className="text-slate-500 font-mono pl-2 border-l border-emerald-500/20">{activeProfile.name}</span>
               </div>
             )}
           </div>
@@ -407,6 +411,17 @@ export default function App() {
         {/* TABS SELECTOR NAVIGATIONBAR */}
         <div className="flex flex-wrap items-center bg-slate-900/40 p-1 border border-slate-800/50 rounded-xl max-w-max select-none">
           <button
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center space-x-2 px-4.5 py-2 text-xs font-bold leading-none rounded-lg transition-all ${
+              activeTab === "overview"
+                ? "bg-slate-800 text-white"
+                : "text-slate-450 hover:text-slate-200"
+            }`}
+          >
+            <Activity className="h-4.5 w-4.5 stroke-[2]" />
+            <span>Übersicht</span>
+          </button>
+          <button
             onClick={() => setActiveTab("dashboard")}
             className={`flex items-center space-x-2 px-4.5 py-2 text-xs font-bold leading-none rounded-lg transition-all ${
               activeTab === "dashboard"
@@ -414,7 +429,7 @@ export default function App() {
                 : "text-slate-450 hover:text-slate-200"
             }`}
           >
-            <Activity className="h-4.5 w-4.5 stroke-[2]" />
+            <Sliders className="h-4.5 w-4.5 stroke-[2]" />
             <span>Kammermonitor</span>
           </button>
 
@@ -439,7 +454,7 @@ export default function App() {
             }`}
           >
             <Heart className="h-4.5 w-4.5 stroke-[2]" />
-            <span>Klimarezepte</span>
+            <span>Grow-Phasen</span>
           </button>
 
           <button
@@ -454,6 +469,11 @@ export default function App() {
             <span>Hardware einrichten</span>
           </button>
         </div>
+
+        {/* TAB 0: OVERVIEW LANDING PAGE */}
+        {activeTab === "overview" && (
+          <OverviewTab sensors={sensors} activeProfile={activeProfile} />
+        )}
 
         {/* TAB 1: OVERVIEW DASHBOARD */}
         {activeTab === "dashboard" && (

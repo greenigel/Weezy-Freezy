@@ -87,35 +87,7 @@ export default function CultivationAssistant() {
   const [newFreqHours, setNewFreqHours] = useState(72);
   const [newDesc, setNewDesc] = useState("");
 
-  const [timelapseStatus, setTimelapseStatus] = useState({ isGenerating: false, frameCount: 0, hasVideo: false });
-  
-  useEffect(() => {
-    const fetchTimelapseStatus = async () => {
-      try {
-        const res = await fetch("/api/timelapse/status");
-        if (res.ok) {
-          const data = await res.json();
-          setTimelapseStatus(data);
-        }
-      } catch (e) {
-        console.error("Failed to fetch timelapse status");
-      }
-    };
-    fetchTimelapseStatus();
-    const interval = setInterval(fetchTimelapseStatus, 10000); // Check every 10 seconds
-    return () => clearInterval(interval);
-  }, []);
 
-  const handleGenerateTimelapse = async () => {
-    try {
-      const res = await fetch("/api/timelapse/generate", { method: "POST" });
-      if (res.ok) {
-        setTimelapseStatus(prev => ({ ...prev, isGenerating: true }));
-      }
-    } catch (e) {
-      console.error("Failed to generate timelapse", e);
-    }
-  };
 
   // Periodical state updates to force countdown ticks
   const [nowTick, setNowTick] = useState(Date.now());
@@ -132,11 +104,6 @@ export default function CultivationAssistant() {
     localStorage.setItem("cannagrow_tasks", JSON.stringify(tasks));
   }, [tasks]);
 
-  const handleSaveStreamUrl = () => {
-    setStreamUrl(tempStreamUrl);
-    localStorage.setItem("cannagrow_stream_url", tempStreamUrl);
-    setIsEditingStream(false);
-  };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,166 +192,6 @@ export default function CultivationAssistant() {
   return (
     <div className="space-y-6">
       
-      {/* 📹 LIVE-CAMERA VIEW WIDGET */}
-      <div id="live-camera-feed-widget" className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 backdrop-blur-md">
-        
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800/60 mb-4">
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Camera className="h-4.5 w-4.5 animate-pulse" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Live Kamera-Feed</h3>
-              <p className="text-4xs text-slate-500 uppercase tracking-wider font-mono">Raspberry Pi Cam Modul</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setIsVideoActive(!isVideoActive)}
-              className={`text-3xs font-semibold px-2.5 py-1 rounded-md border transition ${
-                isVideoActive 
-                  ? "bg-slate-950 border-emerald-500/30 text-emerald-400 hover:bg-slate-900" 
-                  : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              Stream {isVideoActive ? "AN" : "AUS"}
-            </button>
-            
-            <button
-              onClick={() => {
-                setTempStreamUrl(streamUrl);
-                setIsEditingStream(!isEditingStream);
-              }}
-              className="p-1.5 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-950/60 text-slate-400 hover:text-white transition"
-              title="Kamera-URL konfigurieren"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Video stream URL settings input */}
-        {isEditingStream && (
-          <div className="p-3.5 rounded-xl border border-slate-800/80 bg-slate-950/90 mb-4 space-y-2">
-            <p className="text-2xs font-extrabold text-white uppercase tracking-wider font-mono">MJPEG / Video-Stream Adresse:</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="http://192.168.178.50:8000/stream.mjpg"
-                value={tempStreamUrl}
-                onChange={(e) => setTempStreamUrl(e.target.value)}
-                className="flex-1 text-xs px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-emerald-500/50 rounded-lg text-white"
-              />
-              <button
-                onClick={handleSaveStreamUrl}
-                className="px-3 text-2xs font-bold bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition"
-              >
-                Speichern
-              </button>
-            </div>
-            <p className="text-4xs text-slate-500 leading-normal font-sans">
-              Trage hier die IP-Adresse deines Pis ein (z.B. der mjpg-streamer Port). Stelle sicher, dass dein Browser Zugriff auf diese IP hat.
-            </p>
-          </div>
-        )}
-
-        {/* Live Video Canvas Area */}
-        {isVideoActive ? (
-          <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-slate-850 bg-black/60 group">
-            {/* Stream target loader fallback */}
-            <img
-              src={streamUrl.includes('?') ? `${streamUrl}&t=${timestamp}` : `${streamUrl}?t=${timestamp}`}
-              alt="CannaGrow live camera stream feed"
-              referrerPolicy="no-referrer"
-              className="h-full w-full object-cover select-none pointer-events-none"
-              onError={(e) => {
-                // If local image fails, show visual simulation or beautiful mock container
-                e.currentTarget.style.display = "none";
-                const fallbackBlock = document.getElementById("camera-placeholder-error");
-                if (fallbackBlock) fallbackBlock.classList.remove("hidden");
-              }}
-            />
-
-            {/* Simulated Live Overlay Card if local camera stream isn't bound yet */}
-            <div id="camera-placeholder-error" className="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 p-6 text-center">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-900 border border-slate-800 text-slate-500 mb-3 animate-pulse">
-                🌱
-              </div>
-              <p className="text-xs font-bold text-slate-200">Kamera-Stream bereit</p>
-              <p className="text-3xs text-slate-500 max-w-xs mt-1 leading-normal">
-                Verbinde das Kameramodul deines Pi. Aktuelle Kamera-Adresse:
-                <code className="block bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded text-4xs font-mono mt-1 select-all">{streamUrl}</code>
-              </p>
-              
-              {/* Decorative Simulation Overlay imitating growing flower */}
-              <div className="mt-4 text-4xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-3 py-1 font-mono flex items-center">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 mr-1.5 animate-ping"></span>
-                <span>KAMKOPPLUNG FÜR Pi_ZERO_W BEREIT</span>
-              </div>
-            </div>
-
-            {/* Interactive Live Banner */}
-            <div className="absolute top-3 left-3 bg-red-650 text-white font-mono font-bold tracking-widest text-4xs px-2 py-0.5 rounded-md flex items-center shadow-[0_2px_8px_rgba(239,68,68,0.2)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-white mr-1.2 animate-ping"></span>
-              <span>LIVE FEED</span>
-            </div>
-
-            {/* Visual scanline static effects */}
-            <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90.1deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]"></div>
-          </div>
-        ) : (
-          <div className="aspect-video w-full rounded-xl border border-slate-850 bg-slate-950/40 flex flex-col items-center justify-center text-slate-600">
-            <VideoOff className="h-8 w-8 mb-2" />
-            <span className="text-xs">Stream deaktiviert</span>
-          </div>
-        )}
-
-        {/* Timelapse Section */}
-        <div className="mt-4 p-4 rounded-xl border border-slate-800/80 bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-slate-800 rounded-lg text-slate-400">
-              <Video className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">Timelapse Historie</h4>
-              <p className="text-xs text-slate-400">
-                {timelapseStatus.frameCount > 0 ? `${timelapseStatus.frameCount} Bilder gespeichert` : 'Keine Bilder vorhanden'}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {timelapseStatus.isGenerating ? (
-              <span className="text-xs font-mono text-emerald-400 flex items-center bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping mr-2"></span>
-                Generiere Video...
-              </span>
-            ) : (
-              <button 
-                onClick={handleGenerateTimelapse}
-                disabled={timelapseStatus.frameCount === 0}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Video erstellen
-              </button>
-            )}
-            
-            {timelapseStatus.hasVideo && (
-              <a 
-                href="/api/timelapse/video" 
-                target="_blank" 
-                rel="noreferrer"
-                className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
-              >
-                <PlayCircle className="w-4 h-4" />
-                <span>Ansehen</span>
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* 🛎️ CULTIVATION ALERTS & REMINDERS WIDGET (Dauer bis zum nächsten Eingriff) */}
       <div id="cultivation-schedule-widget" className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 backdrop-blur-md space-y-4">
         

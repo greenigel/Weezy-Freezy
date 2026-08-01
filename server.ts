@@ -12,66 +12,13 @@ const DATA_FILE = path.join(__dirname, 'weezy_data.json');
 
 // Standard Grow Profiles (Strain Profile Presets)
 const PRESET_PROFILES: GrowProfile[] = [
-  {
-    id: "og_kush_flower",
-    name: "OG Kush - Blütephase",
-    description: "Klassisches Profil für die Blütephase von OG Kush. Erfordert niedrigere Luftfeuchtigkeit zur Vorbeugung von Schimmel und hohe CO2-Sättigung.",
-    stage: "flowering",
-    lightOnDuration: 12,
-    targetLightIntensity: 100,
-    targetTempDay: 24.5,
-    targetTempNight: 19.0,
-    targetHumidity: 45.0,
-    targetCo2: 1100,
-    targetSoilMoisture: 65.0,
-    targetPh: 6.0,
-    targetEc: 1.8
-  },
-  {
-    id: "white_widow_veg",
-    name: "White Widow - Wachstumsphase",
-    description: "Kräftiges Wachstumsprofil für White Widow in der vegetativen Phase. Hohe Luftfeuchtigkeit und 18 Stunden Licht stimulieren das Blattwerk.",
-    stage: "vegetative",
-    lightOnDuration: 18,
-    targetLightIntensity: 80,
-    targetTempDay: 26.0,
-    targetTempNight: 21.0,
-    targetHumidity: 65.0,
-    targetCo2: 600,
-    targetSoilMoisture: 70.0,
-    targetPh: 5.8,
-    targetEc: 1.4
-  },
-  {
-    id: "northern_lights_seedling",
-    name: "Northern Lights - Keimling",
-    description: "Sehr behutsames Profil für frisch gekeimte Northern Lights Sämlinge. Sehr hohe Luftfeuchtigkeit für die Wurzelentwicklung.",
-    stage: "seedling",
-    lightOnDuration: 18,
-    targetLightIntensity: 40,
-    targetTempDay: 23.5,
-    targetTempNight: 20.0,
-    targetHumidity: 75.0,
-    targetCo2: 450,
-    targetSoilMoisture: 80.0,
-    targetPh: 5.6,
-    targetEc: 0.8
-  },
-  {
-    id: "haze_drying",
-    name: "Haze - Trocknungsprofil",
-    description: "Ermöglicht eine schonende, langsame Trocknung im Kälte-Kühlschrank. Keine Beleuchtung, kühle Temperaturen und geregelte Luftfeuchte.",
-    stage: "drying",
-    lightOnDuration: 0,
-    targetLightIntensity: 0,
-    targetTempDay: 16.0,
-    targetTempNight: 16.0,
-    targetHumidity: 55.0,
-    targetCo2: 400,
-    targetSoilMoisture: 0.0,
-    targetPh: 7.0, // irrelevant during drying
-    targetEc: 0.0
-  }
+  { id: 'ww_seedling', name: 'Sämling (Woche 1)', description: 'Hohe RLF, wenig Licht.', stage: 'seedling', lightOnDuration: 18, targetLightIntensity: 30, targetTempDay: 24, targetTempNight: 20, targetHumidity: 75, targetCo2: 400, targetSoilMoisture: 80, targetPh: 5.8, targetEc: 0.8 },
+  { id: 'ww_veg_early', name: 'Wachstum (Woche 2-3)', description: 'Vegetatives Wachstum. Wurzelbildung.', stage: 'vegetative', lightOnDuration: 18, targetLightIntensity: 60, targetTempDay: 25, targetTempNight: 21, targetHumidity: 65, targetCo2: 600, targetSoilMoisture: 70, targetPh: 5.8, targetEc: 1.2 },
+  { id: 'ww_veg_late', name: 'Wachstum (Woche 4)', description: 'Starkes Wachstum vor Blüte. Höheres CO2.', stage: 'vegetative', lightOnDuration: 18, targetLightIntensity: 90, targetTempDay: 26, targetTempNight: 22, targetHumidity: 60, targetCo2: 800, targetSoilMoisture: 75, targetPh: 5.8, targetEc: 1.6 },
+  { id: 'ww_flower_early', name: 'Blüte (Woche 1-3)', description: 'Einleitung Blüte (12/12). Stretch-Phase.', stage: 'flowering', lightOnDuration: 12, targetLightIntensity: 100, targetTempDay: 26, targetTempNight: 20, targetHumidity: 55, targetCo2: 1000, targetSoilMoisture: 65, targetPh: 6.0, targetEc: 1.8 },
+  { id: 'ww_flower_mid', name: 'Blüte (Woche 4-7)', description: 'Fruchtbildung. RLF senken gegen Schimmel.', stage: 'flowering', lightOnDuration: 12, targetLightIntensity: 100, targetTempDay: 25, targetTempNight: 19, targetHumidity: 45, targetCo2: 1200, targetSoilMoisture: 60, targetPh: 6.2, targetEc: 2.0 },
+  { id: 'ww_flower_late', name: 'Blüte (Spät / Flush)', description: 'Reife. Kälter, kein Dünger, wenig Licht.', stage: 'flowering', lightOnDuration: 12, targetLightIntensity: 80, targetTempDay: 22, targetTempNight: 18, targetHumidity: 40, targetCo2: 400, targetSoilMoisture: 50, targetPh: 6.2, targetEc: 0.5 },
+  { id: 'ww_drying', name: 'Trocknung', description: 'Dunkel, kühl, kontrollierte RLF.', stage: 'drying', lightOnDuration: 0, targetLightIntensity: 0, targetTempDay: 16, targetTempNight: 16, targetHumidity: 55, targetCo2: 400, targetSoilMoisture: 0, targetPh: 7.0, targetEc: 0.0 }
 ];
 
 // Initialize global controller state with OG Kush Flower active
@@ -79,6 +26,7 @@ let currentProfile: GrowProfile = PRESET_PROFILES[0];
 let activeProfilesList: GrowProfile[] = [...PRESET_PROFILES];
 
 let controllerState: ControllerState = {
+  activeRecipeName: 'standard.json',
   currentSensors: {
     temperature: null,
     humidity: null,
@@ -415,6 +363,68 @@ async function startServer() {
     res.json(activeProfilesList);
   });
 
+
+// --- Recipe Storage ---
+const RECIPES_DIR = path.join(__dirname, 'recipes');
+if (!fs.existsSync(RECIPES_DIR)) {
+  fs.mkdirSync(RECIPES_DIR);
+}
+
+app.get("/api/recipes", (req: Request, res: Response) => {
+  try {
+    const files = fs.readdirSync(RECIPES_DIR).filter(f => f.endsWith('.json'));
+    res.json({ status: "success", recipes: files });
+  } catch (e: any) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+});
+
+app.get("/api/recipes/:name", (req: Request, res: Response) => {
+  try {
+    const fileName = req.params.name;
+    const filePath = path.join(RECIPES_DIR, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ status: "error", message: "Rezept nicht gefunden" });
+    }
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.json({ status: "success", profileList: data });
+  } catch (e: any) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+});
+
+app.post("/api/recipes/:name", express.json(), (req: Request, res: Response) => {
+  try {
+    const fileName = req.params.name.endsWith('.json') ? req.params.name : `${req.params.name}.json`;
+    const filePath = path.join(RECIPES_DIR, fileName);
+    const newProfiles = req.body;
+    
+    if (!Array.isArray(newProfiles)) {
+      return res.status(400).json({ status: "error", message: "Payload muss ein Array von Profilen sein." });
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(newProfiles, null, 2), 'utf8');
+    addApiLog('recipe_saved', 'web_ui', `Neues Rezept gespeichert: ${fileName}`);
+    res.json({ status: "success", message: "Rezept gespeichert" });
+  } catch (e: any) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+});
+
+app.delete("/api/recipes/:name", (req: Request, res: Response) => {
+  try {
+    const fileName = req.params.name;
+    const filePath = path.join(RECIPES_DIR, fileName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      addApiLog('recipe_deleted', 'web_ui', `Rezept gelöscht: ${fileName}`);
+    }
+    res.json({ status: "success", message: "Rezept gelöscht" });
+  } catch (e: any) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+});
+
   // 5. Create or adjust a custom Grow/Strain profile
   app.post("/api/profiles", (req: Request, res: Response) => {
     const newProfile: GrowProfile = req.body;
@@ -443,6 +453,41 @@ async function startServer() {
 
     saveData();
 
+    res.json({ status: "success", profiles: activeProfilesList });
+  });
+
+  // 5b. Update ALL profiles via JSON
+  app.post("/api/profiles/json", (req: Request, res: Response) => {
+    let newProfiles = req.body;
+    let recipeName = "Custom";
+    
+    if (req.body && !Array.isArray(req.body) && Array.isArray(req.body.profiles)) {
+      newProfiles = req.body.profiles;
+      recipeName = req.body.recipeName || "Custom";
+    }
+
+    if (!Array.isArray(newProfiles)) {
+      return res.status(400).json({ status: "error", message: "Payload muss ein Array von Profilen sein." });
+    }
+    
+    activeProfilesList = newProfiles;
+    (controllerState as any).activeRecipeName = recipeName;
+    addApiLog('profile_change', 'web_ui', `Alle Grow-Profile via JSON überschrieben (${recipeName}).`);
+
+    
+    // Check if active profile still exists, if not fallback to first
+    const stillExists = activeProfilesList.find(p => p.id === controllerState.activeProfileId);
+    if (stillExists) {
+      currentProfile = stillExists;
+      controllerState.activeProfile = stillExists;
+    } else if (activeProfilesList.length > 0) {
+      currentProfile = activeProfilesList[0];
+      controllerState.activeProfileId = activeProfilesList[0].id;
+      controllerState.activeProfile = activeProfilesList[0];
+    }
+    
+    runRegulationCore();
+    saveData();
     res.json({ status: "success", profiles: activeProfilesList });
   });
 

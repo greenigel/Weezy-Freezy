@@ -58,6 +58,7 @@ export interface ControllerState {
   isAutoMode: boolean; // false if user took manual control of everything
   cultivationMode: 'bio' | 'mineralisch'; // bio = ohne Düngeranmischung, mineralisch = mit Dünger
   simulatedHour?: number | null; // null = real time
+  activeRecipeName?: string;
 }
 
 export interface ApiLogEntry {
