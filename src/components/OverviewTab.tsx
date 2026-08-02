@@ -9,6 +9,25 @@ interface OverviewTabProps {
 
 export default function OverviewTab({ sensors, activeProfile }: OverviewTabProps) {
   const [imageError, setImageError] = useState(false);
+  const [webcamTime, setWebcamTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const fetchInfo = () => {
+      fetch("/api/webcam/info")
+        .then(res => res.json())
+        .then(data => {
+          if (data.lastModified) {
+            setWebcamTime(new Date(data.lastModified));
+            setImageError(false);
+          }
+        })
+        .catch(e => console.error(e));
+    };
+    
+    fetchInfo();
+    const interval = setInterval(fetchInfo, 10000);
+    return () => clearInterval(interval);
+  }, []);
   const [cycleStartDate, setCycleStartDate] = useState<Date | null>(() => {
     const saved = localStorage.getItem("cannagrow_cycle_start");
     return saved ? new Date(saved) : new Date();
@@ -72,7 +91,7 @@ export default function OverviewTab({ sensors, activeProfile }: OverviewTabProps
   const daysUntilFlower = Math.max(0, 30 - daysSinceStart);
 
   // Determine stage name
-  let stageName = activeProfile?.stage || "vegetative";
+  let stageName: string = activeProfile?.stage || "vegetative";
   if (stageName === "vegetative") stageName = "Veg";
   if (stageName === "flowering") stageName = "Blüte";
   if (stageName === "seedling") stageName = "Keimling";
@@ -89,7 +108,7 @@ export default function OverviewTab({ sensors, activeProfile }: OverviewTabProps
                 <Camera className="w-4 h-4 text-slate-400" />
                 <span>Letzte Aufnahme</span>
               </h3>
-              <p className="text-xs text-slate-400">{now.toLocaleDateString("de-DE")} {now.toLocaleTimeString("de-DE")}</p>
+              <p className="text-xs text-slate-400">{webcamTime ? `${webcamTime.toLocaleDateString("de-DE")} ${webcamTime.toLocaleTimeString("de-DE")}` : 'Lädt...'}</p>
             </div>
             <div className="text-right flex flex-col items-end">
               <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{stageName} Tag {daysSinceStart + 1}</div>
@@ -106,7 +125,7 @@ export default function OverviewTab({ sensors, activeProfile }: OverviewTabProps
           <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-800/80 bg-black">
             {!imageError ? (
               <img 
-                src={`/api/webcam?t=${now.getTime()}`} 
+                src={`/api/webcam?t=${webcamTime ? webcamTime.getTime() : now.getTime()}`} 
                 alt="Letzte Aufnahme"
                 className="w-full h-full object-cover"
                 onError={() => setImageError(true)}

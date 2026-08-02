@@ -9,7 +9,6 @@ const __dirname = path.resolve();
 
 // Persistence file
 const DATA_FILE = path.join(__dirname, 'weezy_data.json');
-const HISTORY_FILE = path.join(__dirname, 'weezy_history.json');
 
 // Standard Grow Profiles (Strain Profile Presets)
 const PRESET_PROFILES: GrowProfile[] = [
@@ -75,6 +74,7 @@ function saveData() {
   try {
     const data = {
       controllerState,
+      telemetryHistory,
       apiLogs,
       activeProfilesList
     };
@@ -89,21 +89,14 @@ function loadData() {
     if (fs.existsSync(DATA_FILE)) {
       const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
       if (data.controllerState) controllerState = data.controllerState;
+      if (data.telemetryHistory) telemetryHistory = data.telemetryHistory;
       if (data.apiLogs) apiLogs = data.apiLogs;
       if (data.activeProfilesList) activeProfilesList = data.activeProfilesList;
-      
-      // Load history from data file if it exists there (migration)
-      if (data.telemetryHistory) telemetryHistory = data.telemetryHistory;
       
       // Update references
       const profile = activeProfilesList.find(p => p.id === controllerState.activeProfileId) || activeProfilesList[0];
       currentProfile = profile;
       controllerState.activeProfile = profile;
-    }
-    
-    // Load history from separate file
-    if (fs.existsSync(HISTORY_FILE)) {
-       telemetryHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
     }
   } catch (e) {
     console.error("Failed to load data, starting fresh:", e);
@@ -293,22 +286,9 @@ async function startServer() {
     controllerState.currentSensors = parsedData;
     controllerState.lastTelemetryTime = parsedData.recordedAt;
     
-    // Store in historical record (only once per minute to avoid huge files & lag)
-    const lastPoint = telemetryHistory[telemetryHistory.length - 1];
-    const nowMs = new Date().getTime();
-    const lastMs = lastPoint ? new Date(lastPoint.recordedAt).getTime() : 0;
-    
-    if (nowMs - lastMs >= 60000) {
-      telemetryHistory.push(parsedData);
-      if (telemetryHistory.length > 20000) telemetryHistory.shift(); // ~13.8 days at 1 point/min
-      
-      // Save history separately
-      try {
-        fs.writeFileSync(HISTORY_FILE, JSON.stringify(telemetryHistory), 'utf8');
-      } catch(e) {
-        console.error("Failed to save history", e);
-      }
-    }
+    // Store in historical record
+    telemetryHistory.push(parsedData);
+    if (telemetryHistory.length > 100000) telemetryHistory.shift();
 
     // Log the incoming API request
     const sourceObj = req.headers['user-agent']?.includes('ESP32') ? 'esp32' : 'raspberry_pi';
@@ -322,7 +302,6 @@ async function startServer() {
     runRegulationCore();
 
     saveData();
-    try { fs.writeFileSync(HISTORY_FILE, '[]', 'utf8'); } catch(e) {}
 
     // Send back current desired actions for relays (this is how the Pi knows what to turn on and off!)
     res.json({
@@ -372,7 +351,6 @@ async function startServer() {
     runRegulationCore();
 
     saveData();
-    try { fs.writeFileSync(HISTORY_FILE, '[]', 'utf8'); } catch(e) {}
 
     res.json({
       status: "success",
@@ -474,7 +452,6 @@ app.delete("/api/recipes/:name", (req: Request, res: Response) => {
     }
 
     saveData();
-    try { fs.writeFileSync(HISTORY_FILE, '[]', 'utf8'); } catch(e) {}
 
     res.json({ status: "success", profiles: activeProfilesList });
   });
@@ -511,7 +488,6 @@ app.delete("/api/recipes/:name", (req: Request, res: Response) => {
     
     runRegulationCore();
     saveData();
-    try { fs.writeFileSync(HISTORY_FILE, '[]', 'utf8'); } catch(e) {}
     res.json({ status: "success", profiles: activeProfilesList });
   });
 
@@ -535,7 +511,6 @@ app.delete("/api/recipes/:name", (req: Request, res: Response) => {
     runRegulationCore();
     
     saveData();
-    try { fs.writeFileSync(HISTORY_FILE, '[]', 'utf8'); } catch(e) {}
     
     res.json({ status: "success", controllerState });
   });
@@ -555,7 +530,6 @@ app.delete("/api/recipes/:name", (req: Request, res: Response) => {
     telemetryHistory = [];
     addApiLog('command_received', 'web_ui', 'Historiendatenbank zurückgesetzt.');
     saveData();
-    try { fs.writeFileSync(HISTORY_FILE, '[]', 'utf8'); } catch(e) {}
     res.json({ status: "success", historySize: telemetryHistory.length });
   });
 

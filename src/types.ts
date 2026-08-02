@@ -64,7 +64,7 @@ export interface ControllerState {
 export interface ApiLogEntry {
   id: string;
   timestamp: string;
-  type: 'incoming_telemetry' | 'outgoing_state' | 'command_received' | 'user_override' | 'profile_change';
+  type: 'incoming_telemetry' | 'outgoing_state' | 'command_received' | 'user_override' | 'profile_change' | 'recipe_saved' | 'recipe_deleted';
   source: 'web_ui' | 'raspberry_pi' | 'esp32' | 'simulated_hardware';
   payload: string;
 }

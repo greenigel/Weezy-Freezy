@@ -42,9 +42,9 @@ export default function GrowCharts({
     try {
       const date = new Date(isoString);
       if (timeRange === "1h" || timeRange === "4h") {
-        return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
       }
-      return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')} ${date.getHours()}:00`;
+      return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
     } catch (e) {
       return "";
     }
