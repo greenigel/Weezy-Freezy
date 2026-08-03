@@ -121,6 +121,8 @@ ACTIVE_LOW = True
 VOLTAGE_HISTORY = []
 HISTORY_SIZE = 10
 
+is_light_on = True
+
 def set_relais(pin, state):
     gpio_state = GPIO.LOW if state else GPIO.HIGH
     if not ACTIVE_LOW:
@@ -183,7 +185,12 @@ def capture_webcam():
     os.makedirs(timelapse_dir, exist_ok=True)
     last_timelapse_save = 0
 
+    global is_light_on
     while True:
+        if not is_light_on:
+            time.sleep(10)
+            continue
+            
         try:
             # -d /dev/video0 explicit device
             # -S 10 to skip initial frames and let the camera adjust exposure
@@ -215,7 +222,9 @@ def main():
                 actuators = data.get("actuators", {})
                 
                 # Relais schalten
-                set_relais(PIN_LIGHT, actuators.get("light", False))
+                global is_light_on
+                is_light_on = actuators.get("light", False)
+                set_relais(PIN_LIGHT, is_light_on)
                 
                 intensity = actuators.get("lightIntensity", 0)
                 if not actuators.get("light", False):
