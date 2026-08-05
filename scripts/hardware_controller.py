@@ -31,7 +31,7 @@ import subprocess
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)))
     from DFRobot_GP8403 import *
-    DAC = DFRobot_GP8403(0x58)
+    DAC = DFRobot_GP8403(0x5F)
     if DAC.begin() == 0:
         print("Gravity I2C DAC (0-10V) fuer Dimmung initialisiert.")
         DAC.set_DAC_outrange(OUTPUT_RANGE_10V)
@@ -248,6 +248,7 @@ def main():
                     try:
                         mv = int(intensity * 100)
                         DAC.set_DAC_out_voltage(mv, CHANNEL0)
+                        DAC.set_DAC_out_voltage(mv, CHANNEL1)
                     except Exception as e:
                         pass
 
