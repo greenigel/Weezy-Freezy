@@ -135,7 +135,7 @@ ACTIVE_LOW = True
 VOLTAGE_HISTORY = []
 HISTORY_SIZE = 10
 
-is_light_on = True
+is_light_on = False
 
 def set_relais(pin, state):
     gpio_state = GPIO.LOW if state else GPIO.HIGH

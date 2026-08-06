@@ -138,9 +138,12 @@ function runRegulationCore() {
   const now = new Date();
   // Using Europe/Berlin timezone as the app language is German
   const hourString = now.toLocaleString("en-US", { timeZone: "Europe/Berlin", hour: "numeric", hour12: false });
+  let parsedHour = parseInt(hourString, 10);
+  if (parsedHour === 24) parsedHour = 0;
+  
   const hour = controllerState.simulatedHour !== null && controllerState.simulatedHour !== undefined 
     ? controllerState.simulatedHour 
-    : parseInt(hourString, 10);
+    : parsedHour;
   
   // 1. Light Cycle Control (Lichtzyklus)
   let lightShouldBeOn = false;
